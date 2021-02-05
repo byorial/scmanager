@@ -1,2 +1,1 @@
-# gpmanager
-# Gdirve - Plex Library Manager
+# gpmanager (Gdirve - Plex Library Manager)
