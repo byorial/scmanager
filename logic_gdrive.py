@@ -28,6 +28,7 @@ ModelSetting = P.ModelSetting
 class LogicGdrive(LogicModuleBase):
     db_default = {
         'gdrive_auth_path' : '',
+        'gdrive_scheduler_interval' : '',
     }
 
     def __init__(self, P):
@@ -54,7 +55,6 @@ class LogicGdrive(LogicModuleBase):
             return jsonify({'ret':'exception', 'log':str(e)})
 
     def scheduler_function(self):
-        logger.debug('mmmmmmmmmmmmmmmmmmm')
         if app.config['config']['use_celery']:
             result = LogicGdrive.task.apply_async()
             result.get()
@@ -76,20 +76,7 @@ class LogicGdrive(LogicModuleBase):
                 logger.debug(traceback.format_exc())
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+"""
 class ModelJavcensoredItem(db.Model):
     __tablename__ = '%s_jav_censored_item' % package_name
     __table_args__ = {'mysql_collate': 'utf8_general_ci'}
@@ -196,3 +183,4 @@ class ModelJavcensoredItem(db.Model):
 
         return query 
 
+"""

@@ -28,6 +28,11 @@ class P(object):
             ['gdrive', u'GDrive'], ['plex', u'Plex'], ['log', u'로그']
         ],
         'category' : 'fileprocess',
+        'sub2': {
+            'gdrive': [
+                ['setting', u'설정'], ['list', u'목록'],
+            ]
+        }
     }
 
     plugin_info = {
