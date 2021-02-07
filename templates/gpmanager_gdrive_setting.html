@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div>
+  {{ macros.m_button_group([['global_setting_save_btn', '설정 저장']])}}
+  {{ macros.m_row_start('5') }}
+  {{ macros.m_row_end() }}
+  <form id='setting' name='setting'>
+    {{ macros.setting_global_scheduler_sub_button(arg['scheduler'], arg['is_running']) }}
+    {{ macros.setting_input_text('gdrive_interval', '스케쥴링 실행 정보', value=arg['gdrive_interval'], col='3', desc=['Inverval(minute 단위)이나 Cron 설정']) }}
+    {{ macros.setting_checkbox('gdrive_auto_start', '시작시 자동실행', value=arg['gdrive_auto_start'], desc='On : 시작시 자동으로 스케쥴러에 등록됩니다.') }}
+    {{ macros.setting_input_text('gdrive_auth_path', 'GDrive API 인증파일위치경로', value=arg['gdrive_auth_path'], desc=['GDrive API 사용설정된 인증파일(json)이 위치한 경로']) }}
+    {{ macros.setting_input_text('gdrive_root_folder_id', 'GDrive 루트폴더ID', value=arg['gdrive_root_folder_id'], desc=['GDrive 경로상 Plex에 등록할 영상파일이 존재하는 최상위 경로의 folder_id']) }}
+    {{ macros.setting_input_textarea('gdrive_category_rules', 'GDrive 분류 규칙', value=arg['gdrive_category_rules'], row='8', desc=['GDrive-Plex 폴더생성규칙', '포맷: 에이전트유형,원본GDrive폴더ID,바로가기를생성할GDrive폴더ID','지원에이전트유형: ktv, ftv, movie', '여러개입력시 구분자는 Enter', '예: "ktv,방영중드라마,12dlfkajsdfl23lk4j1,324lkjdfkl33kj4"']) }}
+    {{ macros.setting_input_text('gdrive_plex_path_rule', 'PLEX 경로변환규칙', value=arg['gdrive_plex_path_rule'], desc=['SJVA에서 구글드라이브 경로와 Plex서버상의 경로가 다를경우 사용', '형식: 로컬마운트경로|Plex 상의 경로', '예: /mnt/gdrive|P: (구글드라이브 루트가 Plex 서버에서 P:으로 매칭)']) }}
+  </form>
+</div> <!--전체-->
+
+
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var sub = "{{arg['sub'] }}";
+
+</script>    
+{% endblock %}

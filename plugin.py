@@ -23,16 +23,19 @@ class P(object):
     logger = get_logger(package_name)
     blueprint = Blueprint(package_name, package_name, url_prefix='/%s' %  package_name, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
     menu = {
-        'main' : [package_name, u'PlexManager'],
+        'main' : [package_name, u'GD-Plex관리'],
         'sub' : [
             ['gdrive', u'GDrive'], ['plex', u'Plex'], ['log', u'로그']
         ],
-        'category' : 'fileprocess',
-        'sub2': {
+        'category' : 'plex',
+        'sub2' : {
             'gdrive': [
-                ['setting', u'설정'], ['list', u'목록'],
-            ]
-        }
+                ['setting',u'설정'],['list',u'목록'],
+            ],
+            'plex': [
+                ['setting',u'설정'],['list',u'목록'],
+            ],
+        },
     }
 
     plugin_info = {
@@ -61,10 +64,10 @@ def initialize():
         P.module_list = [LogicGdrive(P)]
         P.logic = Logic(P)
         default_route(P)
+
     except Exception as e: 
         P.logger.error('Exception:%s', e)
         P.logger.error(traceback.format_exc())
 
-
+logger = P.logger
 initialize()
-
