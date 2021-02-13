@@ -1,1 +1,1 @@
-# gpmanager (Gdirve - Plex Library Manager)
+# scmanager (Gdirve Shortcut Manager)

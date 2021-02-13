@@ -23,17 +23,17 @@ class P(object):
     logger = get_logger(package_name)
     blueprint = Blueprint(package_name, package_name, url_prefix='/%s' %  package_name, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
     menu = {
-        'main' : [package_name, u'GD-Plex관리'],
+        'main' : [package_name, u'GDrive관리'],
         'sub' : [
-            ['gdrive', u'GDrive'], ['plex', u'Plex'], ['log', u'로그']
+            ['gdrive', u'바로가기관리'], ['av', 'AV관리'],['log', u'로그']
         ],
-        'category' : 'plex',
+        'category' : 'fileprocess',
         'sub2' : {
             'gdrive': [
-                ['setting',u'설정'],['list',u'목록'],
+                ['setting',u'설정'],['rulelist', u'경로목록'],['itemlist',u'아이템목록']
             ],
-            'plex': [
-                ['setting',u'설정'],['list',u'목록'],
+            'av': [
+                ['itemlist',u'AV목록']
             ],
         },
     }
@@ -44,7 +44,7 @@ class P(object):
         'category_name' : 'fileprocess',
         'icon' : '',
         'developer' : u'orial',
-        'description' : u'Plex Library manager using GDrive shotcut',
+        'description' : u'Library manager using GDrive shotcut',
         'home' : 'https://github.com/byorial/%s' % package_name,
         'more' : '',
     }
@@ -61,7 +61,8 @@ def initialize():
         Util.save_from_dict_to_json(P.plugin_info, os.path.join(os.path.dirname(__file__), 'info.json'))
 
         from .logic_gdrive import LogicGdrive
-        P.module_list = [LogicGdrive(P)]
+        from .logic_av import LogicAv
+        P.module_list = [LogicGdrive(P), LogicAv(P)]
         P.logic = Logic(P)
         default_route(P)
 

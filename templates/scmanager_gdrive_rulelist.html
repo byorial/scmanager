@@ -1,0 +1,462 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<div>
+  <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
+    <div class="container-fluid">
+      <div class="row show-grid" align="center">
+        <span class="col-md-12" align="left">
+          <span class="col-md-4" style="align-items:left; text-align:left;">
+            <select name='agent_type'>
+              <option value="all">전체</option>
+              <option value="ktv">국내TV</option>
+              <option value="ftv">해외TV</option>
+              <option value="movie">영화</option>
+              <option value="avdvd">AVDVD</option>
+              <option value="avama">AVAMA</option>
+            </select>
+         </span>
+         <span class="col-md-6">
+	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
+	 </span>
+         <span class="col-md-2">
+          {{ macros.m_button_group([['search', '검색'], ['rule_register_modal_btn', '신규등록']]) }}
+         </span>
+        </span>
+       </div>
+    </div>
+  </form>
+ <hr>
+</div>
+  <div id='page1'></div>
+<div>
+  {{ macros.m_hr_head_top() }}
+  {{ macros.m_row_start('0') }}
+  {{ macros.m_col(2,  macros.m_strong('ID/등록/갱신시각')) }}
+  {{ macros.m_col(5,  macros.m_strong('제목/폴더ID')) }}
+  {{ macros.m_col(2,  macros.m_strong('자료건수')) }}
+  {{ macros.m_col(3,  macros.m_strong('처리기능')) }}
+  {{ macros.m_row_end() }}
+  {{ macros.m_hr_head_bottom() }}
+  <div id="list_div"></div>
+  <div id='page2'></div>
+</div>
+
+<!-- Modal: 룰 등록 -->
+<div class="modal fade" id="rule_register_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal_title">신규 대상폴더규칙 등록</h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;">
+	<form id="rule_register_form" name="rule_register_form">
+          {{ macros.setting_input_text('rule_name', '규칙명') }}
+	  {{ macros.setting_select_empty('agent_type', '에이전트유형', col='6') }}
+	  {{ macros.setting_input_text_and_buttons('root_folder_id', '원본폴더ID', [['check_rpath_btn', '경로확인']], desc=['검색대상 루트폴더 ID']) }}
+	  {{ macros.info_text('root_full_path', '원본경로') }}
+	  {{ macros.setting_input_int('max_depth', '경로탐색깊이', value='1', desc='탐색할 하위경로의 최대깊이를 지정, 영상폴더가 있는 위치') }}
+	  {{ macros.setting_input_text_and_buttons('target_folder_id', '타겟폴더ID', [['check_tpath_btn', '경로확인']], desc=['바로가기를 생성할 루트폴더 ID']) }}
+	  {{ macros.info_text('target_full_path', '타겟경로')}}
+	  {{ macros.setting_checkbox('use_subfolder', '하위폴더생성여부') }}
+	  {{ macros.setting_input_text('subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }}
+	  {{ macros.setting_checkbox('use_plex', 'Plex연동여부') }}
+	  {{ macros.setting_checkbox('use_schedule', '스케쥴포함여부') }}
+	</form>
+      </div>
+      <div class="modal-footer" style="align-items:right;">
+          <button type="button" id="rule_register_btn" class="btn btn-default">등록</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: 룰 등록 END -->
+
+<!-- Modal: 룰 수정 -->
+<div class="modal fade" id="rule_modify_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal_title">대상폴더규칙 수정</h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;">
+	<form id="rule_modify_form" name="rule_modify_form">
+          {{ macros.setting_input_text('curr_rule_name', '규칙명') }}
+	  {{ macros.setting_select_empty('curr_agent_type', '에이전트유형', col='6') }}
+	  {{ macros.setting_input_text_and_buttons('curr_root_folder_id', '원본폴더ID', [['check_mrpath_btn', '경로확인']], desc=['검색대상 루트폴더 ID']) }}
+	  {{ macros.info_text('curr_root_full_path', '원본경로') }}
+	  {{ macros.setting_input_int('curr_max_depth', '경로탐색깊이', desc='탐색할 하위경로의 최대깊이 지정, 영상폴더가 있는 위치') }}
+	  {{ macros.setting_input_text_and_buttons('curr_target_folder_id', '타겟폴더ID', [['check_mtpath_btn', '경로확인']], desc=['바로가기를 생성할 루트폴더 ID']) }}
+	  {{ macros.info_text('curr_target_full_path', '타겟경로')}}
+	  {{ macros.setting_checkbox('curr_use_subfolder', '하위폴더생성여부') }}
+	  {{ macros.setting_input_text('curr_subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }}
+	  {{ macros.setting_checkbox('curr_use_plex', 'Plex연동여부') }}
+	  {{ macros.setting_checkbox('curr_use_schedule', '스케쥴포함여부') }}
+	</form>
+      </div>
+      <div class="modal-footer" style="align-items:right;">
+          <button type="button" id="rule_modify_btn" class="btn btn-default">저장</button>
+          <button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: 룰 수정END -->
+
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var str_categories = "{{arg['categories'] }}";
+var sub = "{{arg['sub'] }}";
+var current_data = null;
+var current_page = 1;
+var current_rule = null;
+var formData = null;
+var country = 'all';
+var categories = str_categories.split(',');
+
+$(document).ready(function(){
+  formData = get_formdata('#form_search');
+  request_search('1', true);
+});
+
+function make_select(type) {
+  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}, {type: "avdvd", name: "AVDVD"}, {type: "avama", name:"AVAMA"}]
+  str = '<select id="agent_type" name="agent_type" class="form-control form-control-sm">';
+  for(var i in data) {
+    if (type == data[i].type) {
+      str += '<option value="' + data[i].type + '" selected>' + data[i].name + '</option>';
+    } else {
+      str += '<option value="' + data[i].type + '">' + data[i].name + '</option>';
+    }
+  }
+  str += '</select>'
+  document.getElementById("agent_type_div").innerHTML = str;
+}
+
+function make_curr_select(type) {
+  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}, {type: "avdvd", name: "AVDVD"}, {type: "avama", name:"AVAMA"}]
+  str = '<select id="curr_agent_type" name="curr_agent_type" class="form-control form-control-sm">';
+  for(var i in data) {
+    if (type == data[i].type) {
+      str += '<option value="' + data[i].type + '" selected>' + data[i].name + '</option>';
+    } else {
+      str += '<option value="' + data[i].type + '">' + data[i].name + '</option>';
+    }
+  }
+  str += '</select>'
+  document.getElementById("curr_agent_type_div").innerHTML = str;
+}
+
+$("body").on('click', '#page', function(e){
+  e.preventDefault();
+  var page = $(this).data('page')
+  request_search(page, true);
+});
+
+$("#search").click(function(e) {
+  e.preventDefault();
+  request_search('1', true);
+});
+
+$("#reset_btn").click(function(e) {
+  e.preventDefault();
+  document.getElementById("search_word").value = '';
+  request_search(current_page, true);
+});
+
+function request_search(page, scroll) {
+  formData = get_formdata('#form_search');
+  current_page = page;
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/rule_list',
+    type: "POST", 
+    cache: false,
+    data: formData,
+    dataType: "json",
+    success: function (data) {
+      if (scroll == true) {
+        window.scrollTo(0,0);
+      }
+      make_list(data.list)
+      make_page_html(data.paging)
+    }
+  });
+}
+
+function make_list(data) {
+  var gdurl="https://drive.google.com/drive/u/0/folders/";
+  var str = "";
+  current_data = data;
+  for (i in data) {
+    str += m_row_start();
+    tmp = data[i].id + '<br>';
+    tmp += data[i].created_time + '<br>';
+    if (data[i].last_searched_time) {
+      tmp += data[i].last_searched_time;
+    } else {
+      tmp += '-'
+    }
+    str += m_col(2, tmp)
+
+    tmp = '<strong>제목: '+data[i].name+'</strong> (에이전트: '+data[i].agent_type+')<br>';
+    tmp += '&nbsp;&nbsp;원본폴더: <a href="' + gdurl + data[i].root_folder_id + '" target="_blank">';
+    tmp += data[i].root_folder_id + '</a><br>';
+    tmp += '&nbsp;&nbsp;대상폴더: <a href="' + gdurl + data[i].target_folder_id + '" target="_blank">';
+    tmp += data[i].target_folder_id + '</a><br>';
+    str += m_col(5, tmp);
+
+    if (data[i].use_schedule == true) {
+      tmp = '스케쥴: On /';
+    } else {
+      tmp = '스케쥴: Off /';
+    }
+    if (data[i].use_plex == true) {
+      tmp += 'Plex: On<br>';
+    } else {
+      tmp += 'Plex: Off<br>';
+    }
+    tmp += '아이템수: '+data[i].item_count + ' 건<br>';
+    if (data[i].shortcut_count) {
+      tmp += '바로가기: '+data[i].shortcut_count + ' 건<br>';
+    } else { 
+      tmp += '바로가기: 0 건<br>';
+    } 
+    str += m_col(2, tmp);
+    btn_str = m_button('rule_modify_modal_btn', '수정', [{'key':'idx', 'value':i }]);
+    btn_str += m_button2('rule_remove_btn', '삭제', [{'key':'id', 'value':data[i].id}], "danger");
+    btn_str += m_button2('rule_execute_btn', '갱신', [{'key':'id', 'value':data[i].id}], "info");
+    tmp = m_button_group(btn_str)
+    btn_str = m_button('remove_item_btn', '목록삭제', [{'key':'id', 'value':data[i].id}]);
+    btn_str += m_button('remove_shortcut_btn', '숏컷삭제', [{'key':'id', 'value':data[i].id}]);
+    tmp2 = m_button_group(btn_str)
+
+    str += m_col(3, tmp+'<br>'+tmp2)
+    str += m_row_end();
+
+    if (i != data.length -1) {str += m_hr();}
+  }
+  document.getElementById("list_div").innerHTML = str;
+}
+
+$("body").on('click', '#rule_register_btn', function(e){
+  e.preventDefault();
+  var formData = get_formdata('#rule_register_form');
+  rpath = document.getElementById('root_full_path').textContent;
+  tpath = document.getElementById('target_full_path').textContent;
+  formData += '&root_full_path='  + encodeURI(rpath) + '&target_full_path=' + encodeURI(tpath);
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/register_rule',
+    type: "POST",
+    cache: false,
+    data: formData,
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: ' +data.msg+ '</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+  $("#rule_register_modal").modal('hide');
+  location.reload();
+});
+
+$("body").on('click', '#rule_modify_btn', function(e){
+  e.preventDefault();
+  var formData = get_formdata('#rule_modify_form');
+  var id = current_rule.id
+  rpath = document.getElementById('curr_root_full_path').textContent;
+  tpath = document.getElementById('curr_target_full_path').textContent;
+  formData += '&id=' + id + '&curr_root_full_path='  + encodeURI(rpath) + '&curr_target_full_path=' + encodeURI(tpath);
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/modify_rule',
+    type: "POST",
+    cache: false,
+    data: formData,
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: ' +data.msg+ '</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+  $("#rule_modify_modal").modal('hide');
+  location.reload();
+});
+
+$("body").on('click', '#check_rpath_btn,#check_tpath_btn,#check_mrpath_btn,#check_mtpath_btn', function(e){
+  e.preventDefault();
+  var ftype = '';
+  btn_id = $(this).attr('id');
+  if (btn_id == "check_rpath_btn") {
+    folder_id = document.getElementById("root_folder_id").value;
+    ftype = "root_folder_id";
+  } else if (btn_id == "check_tpath_btn") {
+    folder_id = document.getElementById("target_folder_id").value;
+    ftype = "target_folder_id";
+  } else if (btn_id == "check_mrpath_btn") {
+    folder_id = document.getElementById("curr_root_folder_id").value;
+    ftype = "root_mfolder_id";
+  } else {
+    folder_id = document.getElementById("curr_target_folder_id").value;
+    ftype = "target_mfolder_id";
+  }
+  if (folder_id.length < 30) {
+    $.notify('<strong>잘못된 folder_id 입니다. </strong>', {type: 'warning'});
+    return
+  }
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/get_gdrive_path',
+    type: "POST",
+    cache: false,
+    data: {folder_id:folder_id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        if (ftype == 'root_folder_id') {
+	  document.getElementById('root_full_path').innerHTML = data.data;
+	} else if (ftype == 'target_folder_id') {
+	  document.getElementById('target_full_path').innerHTML = data.data;
+	} else if (ftype == 'root_mfolder_id') {
+	  document.getElementById('curr_root_full_path').innerHTML = data.data;
+	} else {
+	  document.getElementById('curr_target_full_path').innerHTML = data.data;
+        }
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+});
+
+$("body").on('click', '#rule_register_modal_btn', function(e) {
+  e.preventDefault();
+  make_select("ktv");
+  $("#rule_register_modal").modal();
+});
+
+$("body").on('click', '#rule_modify_modal_btn', function(e) {
+  e.preventDefault();
+  idx = $(this).data('idx');
+  current_rule = current_data[idx];
+  document.getElementById('curr_rule_name').value = current_rule.name;
+  document.getElementById('curr_root_folder_id').value = current_rule.root_folder_id;
+  document.getElementById('curr_root_full_path').innerHTML = current_rule.root_full_path;
+  document.getElementById('curr_max_depth').value = current_rule.max_depth;
+  document.getElementById('curr_target_folder_id').value = current_rule.target_folder_id;
+  document.getElementById('curr_target_full_path').innerHTML = current_rule.target_full_path;
+  if (current_rule.use_sub_folder == true) {
+    document.getElementById("curr_use_subfolder").value = 'on';
+    $('#curr_use_subfolder').bootstrapToggle('on')
+    //document.getElementById('curr_use_subfolder').setAttribute('checked', '');
+  } else {
+    $('#curr_use_subfolder').bootstrapToggle('off')
+    //document.getElementById('curr_use_subfolder').removeAttribute('checked');
+  }
+  document.getElementById('curr_subfolder_rule').value = current_rule.subfolder_rule;
+  if (current_rule.use_plex == true) {
+    document.getElementById("curr_use_plex").value = 'on';
+    $('#curr_use_plex').bootstrapToggle('on')
+    //document.getElementById('curr_use_plex').setAttribute('checked', '');
+  } else {
+    $('#curr_use_subfolder').bootstrapToggle('off')
+    //document.getElementById('curr_use_plex').removeAttribute('checked');
+  }
+  if (current_rule.use_schedule == true) {
+    document.getElementById("curr_use_schedule").value = 'on';
+    $('#curr_use_schedule').bootstrapToggle('on')
+    //document.getElementById('curr_use_schedule').setAttribute('checked', '');
+  } else {
+    $('#curr_use_schedule').bootstrapToggle('off')
+    //document.getElementById('curr_use_schedule').removeAttribute('checked');
+  }
+  make_curr_select(current_rule.agent_type);
+  $("#rule_modify_modal").modal();
+});
+
+$("body").on('click', '#strm_all_plex_btn', function(e){
+  e.preventDefault();
+  type = 'plex';
+  create_strm_batch(type);
+});
+
+$("body").on('click', '#strm_all_kodi_btn', function(e){
+  e.preventDefault();
+  type = 'kodi';
+  create_strm_batch(type);
+});
+
+$("body").on('click', '#strm_all_btn', function(e){
+  e.preventDefault();
+  type = 'all';
+  create_strm_batch(type);
+});
+
+$("body").on('click', '#shortcut_remove_btn', function(e){
+  e.preventDefault();
+  code = $(this).data('code');
+  type = 'kodi';
+  create_strm(code, type);
+});
+
+$("body").on('click', '#shortcut_create_btn', function(e){
+  e.preventDefault();
+  id = $(this).data('id');
+  create_shortcut(id);
+});
+
+function create_shortcut(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/create_shortcut',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      //request_search(current_page);
+    }
+  });
+}
+
+$("body").on('click', '#rule_execute_btn', function(e){
+  e.preventDefault();
+  id = $(this).data('id');
+  rule_execute(id);
+});
+
+function rule_execute(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/execute_rule',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      request_search(current_page, false);
+    }
+  });
+}
+
+$('#rule_register_modal').on('hidden.bs.modal', function () {
+})
+$('#rule_modify_modal').on('hidden.bs.modal', function () {
+})
+
+</script>    
+{% endblock %}

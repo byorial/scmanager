@@ -1,0 +1,366 @@
+{% extends "base.html" %}
+{% block content %}
+
+
+<div>
+  <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
+    <div class="container-fluid">
+      <div class="row show-grid" align="center">
+        <span class="col-md-12" align="left">
+          <span class="col-md-4" style="align-items:left; text-align:left;">
+            <select name='category'>
+              <option value="all">전체경로</option>
+            </select>
+            <select name='shortcut_status'>
+              <option value="all">전체상태</option>
+              <option value="true">숏컷생성</option>
+              <option value="false">숏컨미생성</option>
+            </select>
+         </span>
+         <span class="col-md-6">
+	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
+	 </span>
+         <span class="col-md-2">
+          {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋']]) }}
+         </span>
+        </span>
+       </div>
+      <hr>
+    </div>
+  </form>
+  <div id='page1'></div>
+<div>
+<hr>
+  <div id="list_div"></div>
+  <div id='page2'></div>
+</div>
+
+<!-- Modal: 메타 검색 -->
+<div class="modal fade" id="meta_search_modal" tabindex="-1" role="dialog" aria-labelledby="myModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h4 class="modal-title" id="modal_title">메타 데이터 검색&amp;적용</h4>
+      </div>
+      <div class="modal-body" id="modal_body" style="word-break:break-all;">
+	<form id="meta_search_form" name="meta_search_form">
+	  {{ macros.info_text('item_id', '아이템ID') }}
+	  {{ macros.info_text('folder_name', '원본폴더명') }}
+	  {{ macros.setting_select_empty('meta_agent_type', '에이전트유형', col='6') }}
+	  {{ macros.setting_input_text_and_buttons('meta_search_word', '검색어', [['meta_search_btn', '메타검색']], desc=['제목']) }}
+	</form>
+	<hr>
+	<div>
+          {{ macros.m_hr_head_top() }}
+          {{ macros.m_row_start('0') }}
+          {{ macros.m_col(3, macros.m_strong('포스터')) }}
+          {{ macros.m_col(4, macros.m_strong('제목/정보')) }}
+          {{ macros.m_col(2, macros.m_strong('등록')) }}
+          {{ macros.m_row_end() }}
+          {{ macros.m_hr_head_bottom() }}
+	  <div id="meta_search_result"></div>
+	</div>
+      </div>
+      <div class="modal-footer" style="align-items:right;">
+          <button type="button" class="btn btn-default" data-dismiss="modal">닫기</button>
+      </div>
+    </div>
+  </div>
+</div>
+<!-- Modal: 룰 등록 END -->
+
+
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var str_categories = "{{arg['categories'] }}";
+var sub = "{{arg['sub'] }}";
+var current_data = null;
+var current_metadata = null;
+var current_page = 1;
+var formData = null;
+var country = 'all';
+var categories = str_categories.split(',');
+
+$(document).ready(function(){
+  load_balloon_css();
+  formData = get_formdata('#form_search');
+  set_referrer();
+  set_category_options();
+  global_sub_request_search('1', true);
+});
+
+function load_balloon_css() {
+  link=document.createElement('link');
+  link.href='/static/css/balloon.min.css';
+  link.rel='stylesheet';
+  document.getElementsByTagName('head')[0].appendChild(link);
+}
+
+$("body").on('click', '#page', function(e){
+  e.preventDefault();
+  var page = $(this).data('page')
+  current_page = page
+  global_sub_request_search(page, true);
+});
+
+$("#search").click(function(e) {
+  e.preventDefault();
+  global_sub_request_search('1', true);
+});
+
+$("#reset_btn").click(function(e) {
+  e.preventDefault();
+  document.getElementById("search_word").value = '';
+  global_sub_request_search(current_page, true);
+});
+
+function make_list(data) {
+  str = '';
+  tmp = '';
+  str += m_row_start();
+  for (i in data) {
+    str += '<div class="col-md-2 col-sm-4 col-6">';
+    str += '<div class="card mb-2 box-shadow">';
+    str += '<img class="card-img-top" src="'+data[i].poster_url+'" class="img-fluid img-thumbnail">';
+    str += '<div class="card-body" style="padding:2px 1px 2px 1px;">';
+    str += '<p class="card-text">';
+    str += '<strong>' + data[i].title + '</strong> / ' + data[i].agent_type.toUpperCase() + '<br>';
+    str += '<small class="text-muted">';
+    str += '장르: '+data[i].genre+' / 국가: ' +data[i].country+ '<br>';
+    str += '원본폴더명: '+data[i].name+'<br>';
+    str += '년도: '+data[i].year+ ' /사이트: '+data[i].site+'<br>';
+    str += '</small>';
+    str += '</p>';
+    str += '<div class="d-flex justify-content-between align-items-center" style="padding:2px 1px 2px 1px;"><br>';
+    //tmp = m_button2('global_json_btn', '정보', [{'key':'id', 'value':data[i].id}], 'info');
+    tmp = '<button id="global_json_btn" name="global_json_btn" class="btn btn-sm btn-outline-success" aria-label="JSON: 해당프로그램의 상세정보를 확인합니다" data-balloon-length="small" data-balloon-pos="down-left" data-id="'+data[i].id+'">J</button>';
+    if (data[i].shortcut_created == false) {
+      tmp += '<button id="shortcut_create_btn" name="shortcut_create_btn" class="btn btn-sm btn-outline-info" data-id="'+data[i].id+'" aria-label="해당프로그램을 Plex에 추가합니다" data-balloon-length="small" data-balloon-pos="down">추가</button>';
+      tmp += '<button id="info_search_btn" name="info_search_btn" class="btn btn-sm btn-outline-info" data-idx="'+i+'" aria-label="메타정보를 조회하고 갱신합니다." data-balloon-length="small" data-balloon-pos="down-right">메타</button>';
+    } else {
+      tmp += '<button id="info_search_btn" name="info_search_btn" class="btn btn-sm btn-outline-info" data-idx="'+i+'" aria-label="메타정보를 조회하고 갱신합니다." data-balloon-length="small" data-balloon-pos="down">메타</button>';
+      tmp += '<button id="shortcut_remove_btn" name="shortcht_remove_btn" class="btn btn-sm btn-outline-danger" data-id="'+data[i].id+'" aria-label="해당프로그램을 Plex에서 삭제합니다." data-balloon-length="small" data-balloon-pos="down-right">삭제</button>';
+    }
+    btn_str = m_button_group(tmp);
+    str += btn_str;
+    str += '<small class="text-muted"></small>';
+    str += '</div>';
+    str += '</div>';
+    str += '</div>';
+    str += '</div>';
+  }
+  str += m_row_end();
+  document.getElementById("list_div").innerHTML = str;
+}
+
+$('#global_json_btn, #shortcut_create_btn, #info_search_btn, #shortcut_remove_btn').on("taphold, click",function(){
+    $(this).title('show');
+});
+
+$("body").on('click', '#strm_all_plex_btn', function(e){
+  e.preventDefault();
+  type = 'plex';
+  create_strm_batch(type);
+});
+
+$("body").on('click', '#strm_all_kodi_btn', function(e){
+  e.preventDefault();
+  type = 'kodi';
+  create_strm_batch(type);
+});
+
+$("body").on('click', '#strm_all_btn', function(e){
+  e.preventDefault();
+  type = 'all';
+  create_strm_batch(type);
+});
+
+$("body").on('click', '#shortcut_remove_btn', function(e){
+  e.preventDefault();
+  code = $(this).data('code');
+  type = 'kodi';
+  create_strm(code, type);
+});
+
+$("body").on('click', '#shortcut_create_btn', function(e){
+  e.preventDefault();
+  id = $(this).data('id');
+  create_shortcut(id);
+});
+
+$("body").on('click', '#info_refresh_btn', function(e){
+  e.preventDefault();
+  id = $(this).data('id');
+  refresh_info(id);
+});
+
+function create_shortcut(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/create_shortcut',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+    }
+  });
+}
+
+$("body").on('click', '#info_search_btn', function(e){
+  e.preventDefault();
+  var idx = $(this).data('idx');
+  var data = current_data.list[idx];
+  make_metasearch_select(data.agent_type);
+  document.getElementById('item_id').innerHTML = data.id;
+  document.getElementById('folder_name').innerHTML = data.name;
+  document.getElementById('meta_search_word').value = data.title;
+  request_meta_search(data.id);
+  $('#meta_search_word').focus().select();
+  $("#meta_search_modal").modal();
+});
+
+function make_metasearch_select(type) {
+  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}, {type: "avdvd", name: "AVDVD"}, {type: "avama", name:"AVAMA"}]
+  str = '<select id="meta_agent_type" name="meta_agent_type" class="form-control form-control-sm">';
+  for(var i in data) {
+    if (type == data[i].type) {
+      str += '<option value="' + data[i].type + '" selected>' + data[i].name + '</option>';
+    } else {
+      str += '<option value="' + data[i].type + '">' + data[i].name + '</option>';
+    }
+  }
+  str += '</select>'
+  document.getElementById("meta_agent_type_div").innerHTML = str;
+}
+
+$("body").on('click', '#meta_search_btn', function(e){
+  e.preventDefault();
+  id = document.getElementById('item_id').textContent;
+  request_meta_search(id);
+});
+
+function request_meta_search(id) {
+  var formData = get_formdata('#meta_search_form');
+  formData += '&id='+id;
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/metadata_search',
+    type: "POST",
+    cache: false,
+    data: formData,
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+	var data = data.data;
+	current_metadata = data;
+	var str = '';
+	var tmp = '';
+	for (i in data) {
+          str += m_row_start();
+          tmp = '<img src="'+data[i].poster_url+'" class="img-fluid img-thumbnail">';
+	  str += m_col(3, tmp);
+	  tmp = '제목 : <strong>'+data[i].title+'</strong><br>';
+	  tmp += '점수 : '+data[i].score+'<br>';
+	  //tmp += '장르 : '+data[i].genre+'<br>';
+	  tmp += '국가 : '+data[i].country+'<br>';
+	  tmp += '연도 : '+data[i].year+'<br>';
+	  tmp += '사이트 : '+data[i].site+'<br>';
+	  tmp += '스튜디오 : '+data[i].studio;
+	  str += m_col(4, tmp);
+	  //btn_str = m_button('apply_meta_btn', '적용', [{'key':'idx', 'value':i}]);
+	  str += m_col(2, m_button('apply_meta_btn', '적용', [{'key':'idx', 'value':i}]));
+          str += m_row_end();
+          if (i != data.length -1) {str += m_hr();}
+	}
+	document.getElementById('meta_search_result').innerHTML = str;
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+}
+
+
+$("body").on('click', '#apply_meta_btn', function(e){
+  e.preventDefault();
+  var idx = $(this).data('idx');
+  var meta = current_metadata[idx];
+  id = document.getElementById('item_id').textContent;
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/apply_meta',
+    type: "POST",
+    cache: false,
+    data: {code:meta.code, id:id, site:meta.site, title:meta.title},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: ' +data.msg+ '</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+      $("#meta_search_modal").modal('hide');
+    }
+  });
+});
+
+
+
+function create_shortcut(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/create_shortcut',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+    }
+  });
+}
+
+function refresh_info(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/refresh_info',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+    }
+  });
+}
+
+function set_referrer() {
+  delete window.document.referrer;
+  window.document.__defineGetter__('referrer', function () {
+    return "www.daum.net";
+  });
+}
+
+function set_category_options() {
+  form_search.category.options[0] = new Option('전체경로', 'all');
+  for (i = 0; i < categories.length; i++) {
+    form_search.category.options[i+1] = new Option(categories[i],categories[i]);
+  }
+}
+
+</script>    
+{% endblock %}
