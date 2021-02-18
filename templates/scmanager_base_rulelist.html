@@ -8,13 +8,8 @@
       <div class="row show-grid" align="center">
         <span class="col-md-12" align="left">
           <span class="col-md-4" style="align-items:left; text-align:left;">
-            <select name='agent_type'>
+            <select name="agent_type" id="agent_type">
               <option value="all">전체</option>
-              <option value="ktv">국내TV</option>
-              <option value="ftv">해외TV</option>
-              <option value="movie">영화</option>
-              <option value="avdvd">AVDVD</option>
-              <option value="avama">AVAMA</option>
             </select>
          </span>
          <span class="col-md-6">
@@ -53,14 +48,14 @@
       <div class="modal-body" id="modal_body" style="word-break:break-all;">
 	<form id="rule_register_form" name="rule_register_form">
           {{ macros.setting_input_text('rule_name', '규칙명') }}
-	  {{ macros.setting_select_empty('agent_type', '에이전트유형', col='6') }}
+	  {{ macros.setting_select_empty('modal_agent_type', '에이전트유형', col='6') }}
 	  {{ macros.setting_input_text_and_buttons('root_folder_id', '원본폴더ID', [['check_rpath_btn', '경로확인']], desc=['검색대상 루트폴더 ID']) }}
 	  {{ macros.info_text('root_full_path', '원본경로') }}
 	  {{ macros.setting_input_int('max_depth', '경로탐색깊이', value='1', desc='탐색할 하위경로의 최대깊이를 지정, 영상폴더가 있는 위치') }}
 	  {{ macros.setting_input_text_and_buttons('target_folder_id', '타겟폴더ID', [['check_tpath_btn', '경로확인']], desc=['바로가기를 생성할 루트폴더 ID']) }}
 	  {{ macros.info_text('target_full_path', '타겟경로')}}
-	  {{ macros.setting_checkbox('use_subfolder', '하위폴더생성여부') }}
-	  {{ macros.setting_input_text('subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }}
+	  <!-- {{ macros.setting_checkbox('use_subfolder', '하위폴더생성여부') }}
+	   {{ macros.setting_input_text('subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }} -->
 	  {{ macros.setting_checkbox('use_plex', 'Plex연동여부') }}
 	  {{ macros.setting_checkbox('use_schedule', '스케쥴포함여부') }}
 	</form>
@@ -90,8 +85,8 @@
 	  {{ macros.setting_input_int('curr_max_depth', '경로탐색깊이', desc='탐색할 하위경로의 최대깊이 지정, 영상폴더가 있는 위치') }}
 	  {{ macros.setting_input_text_and_buttons('curr_target_folder_id', '타겟폴더ID', [['check_mtpath_btn', '경로확인']], desc=['바로가기를 생성할 루트폴더 ID']) }}
 	  {{ macros.info_text('curr_target_full_path', '타겟경로')}}
-	  {{ macros.setting_checkbox('curr_use_subfolder', '하위폴더생성여부') }}
-	  {{ macros.setting_input_text('curr_subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }}
+	  <!-- {{ macros.setting_checkbox('curr_use_subfolder', '하위폴더생성여부') }}
+	   {{ macros.setting_input_text('curr_subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }} -->
 	  {{ macros.setting_checkbox('curr_use_plex', 'Plex연동여부') }}
 	  {{ macros.setting_checkbox('curr_use_schedule', '스케쥴포함여부') }}
 	</form>
@@ -110,6 +105,7 @@
 var package_name = "{{arg['package_name'] }}";
 var str_categories = "{{arg['categories'] }}";
 var sub = "{{arg['sub'] }}";
+var use_av = "{{arg['use_av']}}"
 var current_data = null;
 var current_page = 1;
 var current_rule = null;
@@ -118,32 +114,50 @@ var country = 'all';
 var categories = str_categories.split(',');
 
 $(document).ready(function(){
+  make_agent_type_options();
   formData = get_formdata('#form_search');
   request_search('1', true);
 });
 
+function make_agent_type_options() {
+  if (use_av == 'True') 
+    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
+  else
+    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
+  form_search.agent_type.options.length = 0;
+  for(var i = 0; i < data.length; i++) {
+    form_search.agent_type.options[i] = new Option(data[i].name,data[i].value);
+  }
+}
+
 function make_select(type) {
-  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}, {type: "avdvd", name: "AVDVD"}, {type: "avama", name:"AVAMA"}]
-  str = '<select id="agent_type" name="agent_type" class="form-control form-control-sm">';
-  for(var i in data) {
-    if (type == data[i].type) {
-      str += '<option value="' + data[i].type + '" selected>' + data[i].name + '</option>';
+  if (use_av == 'True') 
+    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
+  else
+    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
+  var str = '<select id="agent_type" name="agent_type" class="form-control form-control-sm">';
+  for(var i = 0; i < data.length; i++) {
+    if (type == data[i].value) {
+      str += '<option value="' + data[i].value + '" selected>' + data[i].name + '</option>';
     } else {
-      str += '<option value="' + data[i].type + '">' + data[i].name + '</option>';
+      str += '<option value="' + data[i].value + '">' + data[i].name + '</option>';
     }
   }
   str += '</select>'
-  document.getElementById("agent_type_div").innerHTML = str;
+  document.getElementById("modal_agent_type_div").innerHTML = str;
 }
 
 function make_curr_select(type) {
-  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}, {type: "avdvd", name: "AVDVD"}, {type: "avama", name:"AVAMA"}]
-  str = '<select id="curr_agent_type" name="curr_agent_type" class="form-control form-control-sm">';
-  for(var i in data) {
-    if (type == data[i].type) {
-      str += '<option value="' + data[i].type + '" selected>' + data[i].name + '</option>';
+  if (use_av == 'True') 
+    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
+  else
+    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
+  var str = '<select id="curr_agent_type" name="curr_agent_type" class="form-control form-control-sm">';
+  for(var i = 0; i < data.length; i++) {
+    if (type == data[i].value) {
+      str += '<option value="' + data[i].value + '" selected>' + data[i].name + '</option>';
     } else {
-      str += '<option value="' + data[i].type + '">' + data[i].name + '</option>';
+      str += '<option value="' + data[i].value + '">' + data[i].name + '</option>';
     }
   }
   str += '</select>'
@@ -203,9 +217,9 @@ function make_list(data) {
 
     tmp = '<strong>제목: '+data[i].name+'</strong> (에이전트: '+data[i].agent_type+')<br>';
     tmp += '&nbsp;&nbsp;원본폴더: <a href="' + gdurl + data[i].root_folder_id + '" target="_blank">';
-    tmp += data[i].root_folder_id + '</a><br>';
+    tmp += data[i].root_full_path + '</a><br>';
     tmp += '&nbsp;&nbsp;대상폴더: <a href="' + gdurl + data[i].target_folder_id + '" target="_blank">';
-    tmp += data[i].target_folder_id + '</a><br>';
+    tmp += data[i].target_full_path + '</a><br>';
     str += m_col(5, tmp);
 
     if (data[i].use_schedule == true) {
@@ -351,30 +365,24 @@ $("body").on('click', '#rule_modify_modal_btn', function(e) {
   document.getElementById('curr_max_depth').value = current_rule.max_depth;
   document.getElementById('curr_target_folder_id').value = current_rule.target_folder_id;
   document.getElementById('curr_target_full_path').innerHTML = current_rule.target_full_path;
-  if (current_rule.use_sub_folder == true) {
-    document.getElementById("curr_use_subfolder").value = 'on';
-    $('#curr_use_subfolder').bootstrapToggle('on')
-    //document.getElementById('curr_use_subfolder').setAttribute('checked', '');
-  } else {
-    $('#curr_use_subfolder').bootstrapToggle('off')
-    //document.getElementById('curr_use_subfolder').removeAttribute('checked');
-  }
-  document.getElementById('curr_subfolder_rule').value = current_rule.subfolder_rule;
+  //if (current_rule.use_sub_folder == true) {
+    //document.getElementById("curr_use_subfolder").value = 'on';
+    //$('#curr_use_subfolder').bootstrapToggle('on')
+  //} else {
+    //$('#curr_use_subfolder').bootstrapToggle('off')
+  //}
+  //document.getElementById('curr_subfolder_rule').value = current_rule.subfolder_rule;
   if (current_rule.use_plex == true) {
     document.getElementById("curr_use_plex").value = 'on';
     $('#curr_use_plex').bootstrapToggle('on')
-    //document.getElementById('curr_use_plex').setAttribute('checked', '');
   } else {
-    $('#curr_use_subfolder').bootstrapToggle('off')
-    //document.getElementById('curr_use_plex').removeAttribute('checked');
+    $('#curr_use_plex').bootstrapToggle('off')
   }
   if (current_rule.use_schedule == true) {
     document.getElementById("curr_use_schedule").value = 'on';
     $('#curr_use_schedule').bootstrapToggle('on')
-    //document.getElementById('curr_use_schedule').setAttribute('checked', '');
   } else {
     $('#curr_use_schedule').bootstrapToggle('off')
-    //document.getElementById('curr_use_schedule').removeAttribute('checked');
   }
   make_curr_select(current_rule.agent_type);
   $("#rule_modify_modal").modal();

@@ -7,9 +7,12 @@
     <div class="container-fluid">
       <div class="row show-grid" align="center">
         <span class="col-md-12" align="left">
-          <span class="col-md-4" style="align-items:left; text-align:left;">
+          <span class="col-md-6" style="align-items:left; text-align:left;">
             <select name='category'>
               <option value="all">전체경로</option>
+            </select>
+            <select name='genre'>
+              <option value="all">전체장르</option>
             </select>
             <select name='shortcut_status'>
               <option value="all">전체상태</option>
@@ -17,7 +20,7 @@
               <option value="false">숏컨미생성</option>
             </select>
          </span>
-         <span class="col-md-6">
+         <span class="col-md-4">
 	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
 	 </span>
          <span class="col-md-2">
@@ -69,10 +72,6 @@
 </div>
 <!-- Modal: 룰 등록 END -->
 
-{{ macros.m_modal_start('play_trailer_modal', '예고편재생', 'modal-lg') }}
-  <span id="play_trailer_video"></span>
-{{ macros.m_modal_end() }}
-
 {{ macros.m_modal_start('children_info_modal', '하위폴더 파일 정보', 'modal-lg') }}
   <div>
     {{ macros.m_hr_head_top() }}
@@ -88,9 +87,9 @@
 
 
 <script type="text/javascript">
-var package_name = "{{arg['package_name'] }}";
-var str_categories = "{{arg['categories'] }}";
-var show_poster = "{{arg['avlist_show_poster'] }}";
+var package_name = "{{arg['package_name']}}";
+var str_categories = "{{arg['categories']}}";
+var str_genres = "{{arg['genres']}}";
 var sub = "{{arg['sub'] }}";
 var current_data = null;
 var current_metadata = null;
@@ -98,21 +97,15 @@ var current_page = 1;
 var formData = null;
 var country = 'all';
 var categories = str_categories.split(',');
+var genres = str_genres.split(',');
 
 $(document).ready(function(){
-  //set_balloon();
-  set_category_options();
   formData = get_formdata('#form_search');
+  set_referrer();
+  set_category_options();
+  set_genre_options();
   global_sub_request_search('1', true);
 });
-
-function set_balloon() {
-  $('link[href="https://unpkg.com/balloon-css/balloon.min.css"]').remove();
-  //link=document.createElement('link');
-  //link.href='/static/css/balloon.css';
-  //link.rel='stylesheet';
-  //document.getElementsByTagName('head')[0].appendChild(link);
-}
 
 $("body").on('click', '#page', function(e){
   e.preventDefault();
@@ -132,57 +125,32 @@ $("#reset_btn").click(function(e) {
   global_sub_request_search(current_page, true);
 });
 
-function text_truncate(txt, length) {
-  if (txt.length > length) return txt.substr(0, length-2)+'...';
-  else return txt;
-}
-
-function get_actors(txt) {
-  var str_actors = txt.split(',')
-  var actors = new Array();
-  for (k in str_actors) {
-    actors.push(str_actors[k].split('|')[0]);
-  }
-  return actors.join(",");
-}
-
 function make_list(data) {
   str = '';
   tmp = '';
-  tt = '';
   str += m_row_start();
-  for (var i in data) {
+  for (i in data) {
     str += '<div class="col-md-2 col-sm-4 col-6">';
     str += '<div class="card mb-2 box-shadow">';
-    if (show_poster == 'True') {
-      str += '<img class="card-img-top" src="'+data[i].poster_url+'" class="img-fluid img-thumbnail">';
-    }
+    str += '<img class="card-img-top" src="'+data[i].poster_url+'" class="img-fluid img-thumbnail">';
     str += '<div class="card-body" style="padding:2px 1px 2px 1px;">';
     str += '<p class="card-text">';
-    tt = text_truncate(data[i].title, 48);
-    str += '<strong aria-label="'+data[i].title+'" data-balloon-pos="down" data-balloon-length="large">' + tt + '</strong> / ' + data[i].agent_type.toUpperCase() + '<br>';
+    str += '<strong>' + data[i].title + '</strong> / ' + data[i].agent_type.toUpperCase() + '<br>';
     str += '<small class="text-muted">';
-    str += '원본폴더: '+data[i].name+'<br>';
+    str += '장르: '+data[i].genre+' / 국가: ' +data[i].country+ '<br>';
+    str += '원본폴더명: '+data[i].name+'<br>';
     str += '년도: '+data[i].year+ ' /사이트: '+data[i].site+'<br>';
-    genre = text_truncate(data[i].genre, 14);
-    str += '장르: '+genre+'<br>';
-    actors = get_actors(data[i].actor);
-    tr_actors = text_truncate(actors, 14);
-    if (actors.length > 16) {str += '배우: <span aria-label="'+actors+'" data-balloon-pos="down", data-balloon-length="medium">'+tr_actors+'</span><br>';}
-    else {str += '배우: '+tr_actors+'<br>';}
     str += '</small>';
     str += '</p>';
     str += '<div class="d-flex justify-content-between align-items-center" style="padding:2px 1px 2px 1px;"><br>';
-    tmp = m_button_tt('global_json_btn', 'J', [{'key':'id', 'value':data[i].id}], 'info', '상세정보 확인(json)', 'down-left', 'small');
+    tmp = m_button_tt('global_json_btn', 'J', [{'key':'id', 'value':data[i].id}], 'success', '상세정보 확인(JSON)', 'down-left', 'small');
     tmp += m_button_tt('get_children_btn', 'F', [{'key':'id', 'value':data[i].id}], 'success', '하위경로파일정보확인', 'down-left', 'small');
     if (data[i].shortcut_created == false) {
-      tmp += m_button_tt('shortcut_create_btn', 'P', [{'key':'id', 'value':data[i].id}], 'info', '해당작품을 Plex에 추가', 'down-left', 'small');
-      tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보 검색/갱신', 'down', 'small');
-      tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down-right', 'small');
+      tmp += m_button_tt('shortcut_create_btn', '추가', [{'key':'id', 'value':data[i].id}], 'info', '해당프로그램을 Plex에 추가합니다', 'down', 'small');
+      tmp += m_button_tt('info_search_btn', '메타', [{'key':'idx', 'value':i}], 'info', '메타정보를 조회하고 갱신합니다', 'down-right', 'small');
     } else {
-      tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보 검색/갱신', 'down-left', 'small');
-      tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down', 'small');
-      tmp += m_button_tt('shortcut_remove_btn', 'D', [{'key':'id', 'value':data[i].id}], 'danger', '해당작품을 Plex에서 삭제', 'down-right', 'small');
+      tmp += m_button_tt('info_search_btn', '메타', [{'key':'idx', 'value':i}], 'info', '메타조회 및 갱신', 'down', 'small');
+      tmp += m_button_tt('shortcut_remove_btn', '삭제', [{'key':'id', 'value':data[i].id}], 'danger', '프로그램 삭제', 'down', 'small');
     }
     btn_str = m_button_group(tmp);
     str += btn_str;
@@ -214,16 +182,23 @@ $("body").on('click', '#strm_all_btn', function(e){
   create_strm_batch(type);
 });
 
+$("body").on('click', '#shortcut_remove_btn', function(e){
+  e.preventDefault();
+  id = $(this).data('id');
+  type = 'kodi';
+  remove_shortcut(id);
+});
+
 $("body").on('click', '#shortcut_create_btn', function(e){
   e.preventDefault();
   id = $(this).data('id');
   create_shortcut(id);
 });
 
-$("body").on('click', '#shortcut_remove_btn', function(e){
+$("body").on('click', '#get_children_btn', function(e){
   e.preventDefault();
   id = $(this).data('id');
-  remove_shortcut(id);
+  get_children_info(id);
 });
 
 $("body").on('click', '#info_refresh_btn', function(e){
@@ -250,6 +225,60 @@ function create_shortcut(id) {
   });
 }
 
+function get_children_info(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/get_children',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        var str = '';
+	for (k in data.list) {
+          str += m_row_start();
+          str += m_col(2, data.list[k].mimeType);
+          tmp = data.list[k].name + '<br>';
+          if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+            tmp += '<a href="https://drive.google.com/drive/folders/' +data.list[k].id+ '" target="_blank">';
+          } else {
+            tmp += '<a href="https://drive.google.com/file/d/' +data.list[k].id+ '" target="_blank">';
+          }
+          tmp += data.list[k].id+ '</a>';
+          str += m_col(6, tmp);
+	  bytes = parseInt(data.list[k].size)
+          str += m_col(2, get_byte_str(bytes))
+          str += m_row_end();
+          if (k != data.list.length -1) {str += m_hr();}
+        }
+	count = data.list.length;
+        k = 0;
+        for (k in current_data.list) {
+          if (id == current_data.list[k].id) {
+	    entity = current_data.list[k];
+	    break;
+          }
+	}
+	title_str = '"'+entity.title +'" 폴더내 파일정보: 파일건수('+count+' 건)';
+	document.getElementById('children_info_list').innerHTML = str;
+	document.getElementById('children_info_modal_title').textContent = title_str;
+        $("#children_info_modal").modal();
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+}
+
+function get_byte_str(bytes, decimals = 2) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const dm = decimals < 0 ? 0 : decimals;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
+}
+
 function remove_shortcut(id) {
   $.ajax({
     url: '/' + package_name + '/ajax/'+sub+'/remove_shortcut',
@@ -268,7 +297,6 @@ function remove_shortcut(id) {
   });
 }
 
-
 $("body").on('click', '#info_search_btn', function(e){
   e.preventDefault();
   var idx = $(this).data('idx');
@@ -276,14 +304,14 @@ $("body").on('click', '#info_search_btn', function(e){
   make_metasearch_select(data.agent_type);
   document.getElementById('item_id').innerHTML = data.id;
   document.getElementById('folder_name').innerHTML = data.name;
-  document.getElementById('meta_search_word').value = data.ui_code;
+  document.getElementById('meta_search_word').value = data.title;
   request_meta_search(data.id);
   $('#meta_search_word').focus().select();
   $("#meta_search_modal").modal();
 });
 
 function make_metasearch_select(type) {
-  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}, {type: "avdvd", name: "AVDVD"}, {type: "avama", name:"AVAMA"}]
+  data = [{type: "ktv", name: "국내TV"}, {type: "ftv", name: "해외TV"}, {type: "movie", name: "영화"}]
   str = '<select id="meta_agent_type" name="meta_agent_type" class="form-control form-control-sm">';
   for(var i in data) {
     if (type == data[i].type) {
@@ -404,20 +432,12 @@ function refresh_info(id) {
   });
 }
 
-$("body").on('click', '#play_trailer_btn', function(e){
-  e.preventDefault();
-  var trailer_url = $(this).data('trailer_url');
-  if (trailer_url.startsWith('http')) {
-    str = '<video oncontextmenu="return false;" id="trailer" width="100%" controls autoplay preload="metadata">';
-    str += '<source src="' + trailer_url + '" type="video/mp4"></video>';
-    document.getElementById("play_trailer_video").innerHTML = str;
-    $("#play_trailer_modal").modal();
-  }
-});
-
-$("#play_trailer_modal").on('hidden.bs.modal', function () {
-  document.getElementById("trailer").pause();
-});
+function set_referrer() {
+  delete window.document.referrer;
+  window.document.__defineGetter__('referrer', function () {
+    return "www.daum.net";
+  });
+}
 
 function set_category_options() {
   form_search.category.options[0] = new Option('전체경로', 'all');
@@ -426,70 +446,18 @@ function set_category_options() {
   }
 }
 
-$("body").on('click', '#get_children_btn', function(e){
-  e.preventDefault();
-  id = $(this).data('id');
-  get_children_info(id);
-});
-
-function get_children_info(id) {
-  $.ajax({
-    url: '/' + package_name + '/ajax/'+sub+'/get_children',
-    type: "POST",
-    cache: false,
-    data: {'id':id},
-    dataType: "json",
-    success: function (data) {
-      if ( data.ret == 'success') {
-        var str = '';
-	for (k in data.list) {
-          str += m_row_start();
-          str += m_col(2, data.list[k].mimeType);
-          tmp = data.list[k].name + '<br>';
-          if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
-            tmp += '<a href="https://drive.google.com/drive/folders/' +data.list[k].id+ '" target="_blank">';
-          } else {
-            tmp += '<a href="https://drive.google.com/file/d/' +data.list[k].id+ '" target="_blank">';
-          }
-          tmp += data.list[k].id+ '</a>';
-          str += m_col(6, tmp);
-	  bytes = parseInt(data.list[k].size)
-          str += m_col(2, get_byte_str(bytes))
-          str += m_row_end();
-          if (k != data.list.length -1) {str += m_hr();}
-        }
-	count = data.list.length;
-        k = 0;
-        for (k in current_data.list) {
-          if (id == current_data.list[k].id) {
-	    entity = current_data.list[k];
-	    break;
-          }
-	}
-	title_str = '"['+entity.ui_code +']" 폴더내 파일정보: 파일건수('+count+' 건)';
-	document.getElementById('children_info_list').innerHTML = str;
-	document.getElementById('children_info_modal_title').textContent = title_str;
-        $("#children_info_modal").modal();
-      } else {
-        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
-      }
-    }
-  });
+function set_genre_options() {
+  form_search.genre.options[0] = new Option('전체장르', 'all');
+  for (i = 0; i < genres.length; i++) {
+    var g = genres[i].replace(/&amp;/g,'&'); 
+    form_search.genre.options[i+1] = new Option(g,g);
+  }
 }
 
-function get_byte_str(bytes, decimals = 2) {
-    if (bytes === 0) return '0 Bytes';
-    const k = 1024;
-    const dm = decimals < 0 ? 0 : decimals;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB', 'EB', 'ZB', 'YB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
-    return parseFloat((bytes / Math.pow(k, i)).toFixed(dm)) + ' ' + sizes[i];
-}
-
-function m_button_tt(id, text, data, outline_color, title="none", pos="down", size="small") {
+function m_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
   var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
-  if (title == "none") str += ' aria-label="' +text+'"';
-  else str += ' aria-label="' +title+'"';
+  if (tooltip == '') str += ' aria-label="' +text+'"';
+  else str += ' aria-label="' +tooltip+'"';
   str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
   for ( var i in data) {
     str += ' data-' + data[i].key + '="' + data[i].value+ '" '
@@ -497,5 +465,6 @@ function m_button_tt(id, text, data, outline_color, title="none", pos="down", si
   str += '>' + text + '</button>';
   return str;
 }
+
 </script>    
 {% endblock %}
