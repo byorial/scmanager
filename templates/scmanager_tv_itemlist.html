@@ -14,10 +14,13 @@
             <select name='genre'>
               <option value="all">전체장르</option>
             </select>
-            <select name='shortcut_status'>
+            <select name='status_option'>
               <option value="all">전체상태</option>
               <option value="true">숏컷생성</option>
               <option value="false">숏컨미생성</option>
+              <option value="onair">방영중</option>
+              <option value="ended">방영종료</option>
+              <option value="excluded">제외목록</option>
             </select>
          </span>
          <span class="col-md-6">
@@ -146,11 +149,16 @@ function make_list(data) {
     tmp = m_button_tt('global_json_btn', 'J', [{'key':'id', 'value':data[i].id}], 'success', '상세정보 확인(JSON)', 'down-left', 'small');
     tmp += m_button_tt('get_children_btn', 'F', [{'key':'id', 'value':data[i].id}], 'success', '하위경로파일정보확인', 'down-left', 'small');
     if (data[i].shortcut_created == false) {
-      tmp += m_button_tt('shortcut_create_btn', '추가', [{'key':'id', 'value':data[i].id}], 'info', '해당프로그램을 Plex에 추가합니다', 'down', 'small');
-      tmp += m_button_tt('info_search_btn', '메타', [{'key':'idx', 'value':i}], 'info', '메타정보를 조회하고 갱신합니다', 'down-right', 'small');
+      tmp += m_button_tt('shortcut_create_btn', 'P', [{'key':'id', 'value':data[i].id}], 'info', '해당프로그램을 Plex에 추가합니다', 'down', 'small');
+      tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보를 조회하고 갱신합니다', 'down-right', 'small');
     } else {
-      tmp += m_button_tt('info_search_btn', '메타', [{'key':'idx', 'value':i}], 'info', '메타조회 및 갱신', 'down', 'small');
-      tmp += m_button_tt('shortcut_remove_btn', '삭제', [{'key':'id', 'value':data[i].id}], 'danger', '프로그램 삭제', 'down', 'small');
+      tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타조회 및 갱신', 'down', 'small');
+      tmp += m_button_tt('shortcut_remove_btn', 'D', [{'key':'id', 'value':data[i].id}], 'danger', '프로그램 삭제', 'down', 'small');
+    }
+    if (data[i].excluded == false) {
+      tmp += m_button_tt('add_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에서 제외하기', 'down-right', 'small');
+    } else {
+      tmp += m_button_tt('del_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에 추가하기', 'down-right', 'small');
     }
     btn_str = m_button_group(tmp);
     str += btn_str;
@@ -205,6 +213,31 @@ $("body").on('click', '#info_refresh_btn', function(e){
   id = $(this).data('id');
   refresh_info(id);
 });
+
+$("body").on('click', '#add_excluded_btn, #del_excluded_btn', function(e){
+  e.preventDefault();
+  var action = $(this).attr('id').split('_')[0];
+  id = $(this).data('id');
+  change_excluded(id, action);
+});
+
+function change_excluded(id, action) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/change_excluded',
+    type: "POST",
+    cache: false,
+    data: {'id':id, 'action':action},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+    }
+  });
+}
 
 function create_shortcut(id) {
   $.ajax({

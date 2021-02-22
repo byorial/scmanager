@@ -1,0 +1,212 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div>
+  {{ macros.m_button_group([['global_setting_save_btn', '설정 저장']])}}
+  {{ macros.m_row_start('5') }}
+  {{ macros.m_row_end() }}
+  <nav>
+    {{ macros.m_tab_head_start() }}
+      {{ macros.m_tab_head2('api', 'API설정', true) }}
+      {{ macros.m_tab_head2('normal', '일반', false) }}
+      {{ macros.m_tab_head2('plex', 'PLEX', false) }}
+      {{ macros.m_tab_head2('ktv', 'KTV', false) }}
+      {{ macros.m_tab_head2('ftv', 'FTV', false) }}
+      {{ macros.m_tab_head2('movie', '영화', false) }}
+      {% if arg['use_av'] == True %}
+        {{ macros.m_tab_head2('avdvd', 'AV-DVD', false) }}
+        {{ macros.m_tab_head2('avama', 'AV-AMA', false) }}
+      {% endif %}
+      {{ macros.m_tab_head2('etc', '기타', false) }}
+    {{ macros.m_tab_head_end() }}
+  </nav>
+  <form id='setting' name='setting'>
+  <div class="tab-content" id="nav-tabContent">
+   {{ macros.m_tab_content_start('api', true) }}
+    {{ macros.info_text('sa_auth_status', '서비스계정 인증상태', desc=['구글드라이브 조회, 정보획득, 바로가기 생성에 사용']) }}
+    {{ macros.setting_input_text_and_buttons('gdrive_auth_path', '서비스계정인증파일위치경로', [['sa_auth_btn', '서비스계정인증']],value=arg['gdrive_auth_path'], desc=['GDrive API 사용설정된 서비스계정의 인증파일(json)이 위치한 경로', 'RcloneExpand 모듈로 생성한 인증파일 위치(json파일들이위치한 폴더)','서비스계정 인증상태가 미인증인 경우 경로입력 후 "서비스계정인증" 버튼을 눌러주세요']) }}
+    {{ macros.m_hr() }}
+    {{ macros.info_text('user_auth_status', '사용자API인증상태', desc=['폴더생성, 바로가기 삭제에 사용']) }}
+    {{ macros.info_text_go('', 'QuickStart Python', value='https://developers.google.com/drive/api/v3/quickstart/python', desc=['GDriveAPI사용 설정, 이미 사용설정된 API가 있는 경우 불필요함']) }}
+    {{ macros.setting_input_text('gdrive_creds_path', '사용자API credential.json 경로', value=arg['gdrive_creds_path'], desc=['GDrive API credentials.json이 위치한 경로','구글콘솔에서 OAuth json파일을 다운받아 저장한 경로']) }}
+    {{ macros.setting_input_text_and_buttons('gdrive_token_path', '사용자API token경로', [['auth_with_token_btn', '토큰인증']], value=arg['gdrive_token_path'], desc=['GDrive API 사용자 TOKEN경로: token.pickle 파일', '이미 생성된 토큰파일이 있는 경우 경로 지정후 인증 "토큰인증" 버튼을 눌러주세요.']) }}
+    {{ macros.setting_input_text_and_buttons('gdrive_auth_code', 'API 인증 코드', [['auth_step1_btn', '인증'], ['auth_step2_btn', '토큰생성']], value=arg['gdrive_auth_code'], desc=['바로가기 삭제시 필요, 사용자API인증상태가 False인 경우 실행필요','순서: 1. credentials.json파일 확인 후 인증클릭  2.코드입력  3.토큰생성 클릭']) }}
+   {{ macros.m_tab_content_end() }}
+   {{ macros.m_tab_content_start('normal', false) }}
+    {{ macros.setting_global_scheduler_sub_button(arg['scheduler'], arg['is_running']) }}
+    {{ macros.setting_input_text('scmbase_interval', '스케쥴링 실행 정보', value=arg['scmbase_interval'], col='3', desc=['Inverval(minute 단위)이나 Cron 설정']) }}
+    {{ macros.setting_checkbox('scmbase_auto_start', '시작시 자동실행', value=arg['scmbase_auto_start'], desc='On : 시작시 자동으로 스케쥴러에 등록됩니다.') }}
+    {{ macros.setting_input_int('gdrive_thread_num', 'GDrive처리Thread수', value=arg['gdrive_thread_num'], desc='Gdrive 파일탐색/처리용 쓰레드 수') }}
+    {{ macros.setting_input_text('gdrive_plex_path_rule', 'PLEX 경로변환규칙', value=arg['gdrive_plex_path_rule'], desc=['SJVA에서 구글드라이브 경로와 Plex서버상의 경로가 다를경우 사용', '형식: GDrive상경로|Plex 상의 경로', '예: /Plex|P: (구글드라이브 Plex가 Plex 서버에서 P:으로 매칭)']) }}
+    {{ macros.setting_input_text('gdrive_local_path_rule', '로컬 경로변환규칙', value=arg['gdrive_plex_path_rule'], desc=['SJVA에서 구글드라이브 경로와 로컬마운트 경로가 다를경우 사용', '형식: GDrive상경로|로컬마운트 경로', '예: /Plex|/mnt/plex (구글드라이브 Plex가 로컬에서 /mnt/plex로 마운트됨 경우)']) }}
+    {{ macros.setting_checkbox('use_trash', '삭제시휴지통사용', value=arg['use_trash'], desc=['바로가기 삭제시 휴지통 사용여부(구드휴지통 아님/별도의폴더)']) }}
+    {{ macros.setting_input_text('trash_folder_id', '휴지통폴더ID', value=arg['trash_folder_id'], desc=['휴지통으로 사용할 폴더ID']) }}
+    {% if arg['use_av'] == True %}
+      {{ macros.setting_checkbox('avlist_show_poster', 'AV목록에 포스터표시', value=arg['avlist_show_poster'], desc='On : AV목록에서 포스터를 보여줌') }}
+    {% endif %}
+   {{ macros.m_tab_content_end() }}
+   {{ macros.m_tab_content_start('plex', false) }}
+    {{ macros.setting_checkbox('plex_remove_library', '라이브러리 삭제', value=arg['plex_remove_library'], desc='On : 바로가기 삭제시 Plex라이브러리 에서도 해당 작품을 삭제함') }}
+    {{ macros.setting_input_int('plex_scan_delay', '스캔요청 지연시간', value=arg['plex_scan_delay'], desc='바로가기생성 후 스캔명령 전송 지연 시간(초단위)') }}
+    {{ macros.setting_input_int('plex_scan_min_limit', '스캔재전송제한시간(초)', value=arg['plex_scan_min_limit'], desc=['동일섹션에 대해 스캔명령을 재 전송할 최소 제한 시간','10으로 설정시 10초 내에는 동일 섹션에 스캔명령을 전송하지 않음']) }}
+   {{ macros.m_tab_content_end() }}
+   {{ macros.m_tab_content_start('ktv', false) }}
+   <!--{{ macros.setting_global_scheduler_sub_button(arg['tv_scheduler'], arg['tv_is_running']) }} -->
+{{ macros.setting_top('스케쥴링 작동') }}
+<div class="input-group col-sm-3">
+  {% if arg['is_include_tv'] == 'True' %}
+  <input id="tv_scheduler" name="tv_scheduler" class="form-control form-control-sm" type="checkbox" data-toggle="toggle" checked>
+  {% else %}
+  <input id="tv_scheduler" name="tv_scheduler" class="form-control form-control-sm" type="checkbox" data-toggle="toggle">
+  {% endif %}
+  {% if arg['is_running_tv'] == 'True' %}
+    <span style="padding-left:10px; padding-top: 8px;">동작중</span>
+  {% else %}    
+    {% if arg['is_include_tv'] == 'True' %}
+      <span style="padding-left:10px; padding-top: 8px;">대기중</span>
+    {% endif %}  
+  {% endif %}    
+</div>
+{{ macros.setting_bottom('On : 스케쥴링 시작(방영중TV 신규에피 자동추가','Off : 스케쥴링 중지') }}
+    {{ macros.setting_input_text('tv_interval', '스케쥴링 실행 정보', value=arg['tv_interval'], col='3', desc=['Inverval(minute 단위)이나 Cron 설정']) }}
+    {{ macros.setting_checkbox('tv_auto_start', '시작시 자동실행', value=arg['tv_auto_start'], desc='On : 시작시 자동으로 스케쥴러에 등록됩니다.') }}
+    {{ macros.setting_input_int('ktv_meta_result_limit_per_site', '메타조회결과제한값', value=arg['ktv_meta_result_limit_per_site'], desc='메타조회시 사이트별 표시할 최대 작품 갯수') }}
+    {{ macros.setting_checkbox('ktv_use_season_folder', '시즌폴더 사용', value=arg['ktv_use_season_folder'], desc='On : 작품폴더 하위에 시즌폴더가 있는 경우 프로그램을 시즌별로 등록') }}
+    {{ macros.setting_input_text('ktv_shortcut_name_rule', '바로가기 이름규칙', value=arg['ktv_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "제목 (년도)"', '지원: {title},{year},{genre},{studio}']) }}
+   {{ macros.m_tab_content_end() }}
+   {{ macros.m_tab_content_start('ftv', false) }}
+    {{ macros.setting_input_int('ftv_meta_result_limit_per_site', '메타조회결과제한값', value=arg['ftv_meta_result_limit_per_site'], desc='메타조회시 사이트별 표시할 최대 작품 갯수') }}
+    {{ macros.setting_checkbox('ftv_use_season_folder', '시즌폴더 사용', value=arg['ktv_use_season_folder'], desc='On : 작품폴더 하위에 시즌폴더가 있는 경우 프로그램을 시즌별로 등록') }}
+    {{ macros.setting_input_text('ftv_shortcut_name_rule', '바로가기 이름규칙', value=arg['ftv_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "제목 (년도)"', '지원: {title},{year},{genre},{studio}']) }}
+   {{ macros.m_tab_content_end() }}
+   {{ macros.m_tab_content_start('movie', false) }}
+    {{ macros.setting_input_text('movie_shortcut_name_rule', '바로가기 이름규칙', value=arg['movie_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "제목 (년도)"', '지원: {title},{year},{genre},{studio}']) }}
+   {{ macros.m_tab_content_end() }}
+   {% if arg['use_av'] == True %}
+    {{ macros.m_tab_content_start('avdvd', false) }}
+     {{ macros.setting_input_text('avdvd_shortcut_name_rule', '바로가기 이름규칙', value=arg['avdvd_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "품번"', '지원: {ui_code},{actor},{year},{genre},{studio}']) }}
+     {{ macros.m_tab_content_end() }}
+     {{ macros.m_tab_content_start('avama', false) }}
+     {{ macros.setting_input_text('avama_shortcut_name_rule', '바로가기 이름규칙', value=arg['avama_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "품번"', '지원: {ui_code},{title},{year},{genre},{studio}']) }}
+    {{ macros.m_tab_content_end() }}
+   {% endif %}
+   {{ macros.m_tab_content_start('etc', false) }}
+     {{ macros.setting_button([['refresh_all_rule_btn','경로규칙갱신'],['reset_all_rule_btn','경로규칙삭제']], left='경로규칙', desc='') }}
+   {{ macros.m_tab_content_end() }}
+  </form>
+</div> <!--전체-->
+
+
+
+<script type="text/javascript">
+var package_name = "{{arg['package_name'] }}";
+var sub = "{{arg['sub'] }}";
+var user_auth = "{{ arg['gdrive_user_auth'] }}";
+var sa_auth = "{{ arg['gdrive_sa_auth'] }}";
+var use_av = "{{ arg['use_av'] }}";
+
+$(document).ready(function(){
+  if (sa_auth == 'True') {
+    document.getElementById('sa_auth_status').innerHTML = '<strong>인증됨(사용가능)</strong>';
+  } else {
+    document.getElementById('sa_auth_status').innerHTML = '<strong style="font-color:red;">미인증(사용불가)</strong>';
+  }
+  if (user_auth == 'True') {
+    document.getElementById('user_auth_status').innerHTML = '<strong>인증됨(사용가능)</strong>';
+  } else {
+    document.getElementById('user_auth_status').innerHTML = '<strong style="font-color:red;">미인증(사용불가)</strong>';
+  }
+});
+
+$("body").on('click', '#auth_step1_btn', function(e) {
+  e.preventDefault();
+  $.ajax({
+    url: '/' + package_name + '/ajax/' + sub + '/auth_step1',
+    type: "POST", 
+    cache: false,
+    data:{},
+    dataType: "json",
+    success: function (data) {
+      window.open(data, "_blank");
+    }
+  });
+});
+
+$("body").on('click', '#auth_step2_btn', function(e) {
+  e.preventDefault();
+  code = document.getElementById('gdrive_auth_code').value;
+  $.ajax({
+    url: '/' + package_name + '/ajax/' + sub + '/auth_step2',
+    type: "POST", 
+    cache: false,
+    data:{code:code},
+    dataType: "json",
+    success: function (data) {
+      if (data) {
+        $.notify('<strong>토큰을 생성하였습니다.</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>토큰 생성에 실패하였습니다.</strong>', {type: 'warning'});
+      }
+    } 
+  });
+});
+
+
+$("body").on('click', '#sa_auth_btn', function(e) {
+  e.preventDefault();
+  path = document.getElementById('gdrive_auth_path').value;
+  $.ajax({
+    url: '/' + package_name + '/ajax/' + sub + '/auth_sa',
+    type: "POST", 
+    cache: false,
+    data:{path:path},
+    dataType: "json",
+    success: function (data) {
+      if (data) {
+        $.notify('<strong>서비스 계정 인증 완료</strong>', {type: 'success'});
+        document.getElementById('sa_auth_status').innerHTML = '<strong>인증됨(사용가능)</strong>';
+      } else {
+        $.notify('<strong>서비스 계정 인증 실패</strong>', {type: 'warning'});
+        document.getElementById('sa_auth_status').innerHTML = '<strong style="font-color:red;">미인증(사용불가)</strong>';
+      }
+    } 
+  });
+});
+
+$("body").on('click', '#auth_with_token_btn', function(e) {
+  e.preventDefault();
+  $.ajax({
+    url: '/' + package_name + '/ajax/' + sub + '/auth_by_token',
+    type: "POST", 
+    cache: false,
+    data:{},
+    dataType: "json",
+    success: function (data) {
+      if (data.ret == 'success') {
+        $.notify('<strong>'+data.msg+'</strong>', {type: 'success'});
+        document.getElementById('user_auth_status').innerHTML = '<strong>인증됨(사용가능)</strong>';
+	
+      } else {
+        $.notify('<strong>'+data.msg+'</strong>', {type: 'warning'});
+        document.getElementById('user_auth_status').innerHTML = '<strong style="font-color:red;">미인증(사용불가)</strong>';
+      }
+    }
+  });
+});
+
+// 사용 on / off
+$('#tv_scheduler').change(function() {
+  var ret = $(this).prop('checked');
+  $.ajax({
+    url: '/'+package_name+'/ajax/'+sub+'/tv_scheduler',
+    type: "POST",
+    cache: false,
+    data: {scheduler : ret},
+    dataType: "json",
+    success: function (list) {
+    }
+  });
+});
+
+</script>    
+{% endblock %}

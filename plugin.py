@@ -17,48 +17,77 @@ from framework.common.plugin import get_model_setting, Logic, default_route
 # 패키지
 #########################################################
 use_av = True
+use_setting = True
 
 class P(object):
     package_name = __name__.split('.')[0]
     logger = get_logger(package_name)
     blueprint = Blueprint(package_name, package_name, url_prefix='/%s' %  package_name, template_folder=os.path.join(os.path.dirname(__file__), 'templates'))
 
-    import sqlite3
-    conn = sqlite3.connect(os.path.join(path_data, 'db', '{package_name}.db'.format(package_name=package_name)))
-    cursor = conn.cursor()
-    key = ('use_av',)
-    cursor.execute('SELECT value from scmanager_setting where key=?', key)
-    value = cursor.fetchone()
-    if value[0] == u"True": use_av = True
-    else: use_av = False
-    conn.close()
+    try:
+        import sqlite3
+        conn = sqlite3.connect(os.path.join(path_data, 'db', '{package_name}.db'.format(package_name=package_name)))
+        cursor = conn.cursor()
+        key = ('use_av',)
+        cursor.execute('SELECT value from scmanager_setting where key = ?', key)
+        value = cursor.fetchone()
+        if value[0] == u"True": use_av = True
+        else: use_av = False
+        key = ('use_setting',)
+        cursor.execute('SELECT value from scmanager_setting where key = ?', key)
+        value = cursor.fetchone()
+        if value[0] == u"True": use_setting = True
+        else: use_setting = False
+        conn.close()
+    except Exception as e: 
+        logger.error('failed to get user setting')
+        logger.error('Exception:%s', e)
+        logger.error(traceback.format_exc())
+        conn.close()
+        use_av = True
+        use_setting = True
 
     if use_av:
         menu = {
-            'main' : [package_name, u'GDrive관리'],
+            'main' : [package_name, u'GD바로가기관리'],
             'sub' : [
-                ['base', u'라이브러리관리'], ['tv', 'TV목록'], ['mv', '영화목록'], ['av', 'AV관리'], ['log', u'로그']
+                ['scmbase', u'라이브러리관리'], ['tv', 'TV목록'], ['mv', '영화목록'], ['av', 'AV목록'], ['log', u'로그']
             ],
-            'category' : 'fileprocess',
+            'category' : 'service',
             'sub2' : {
-                'base': [
+                'scmbase': [
                     ['setting',u'설정'],['rulelist', u'경로규칙목록']
                 ],
             },
         }
     else:
-        menu = {
-            'main' : [package_name, u'GDrive관리'],
-            'sub' : [
-                ['base', u'라이브러리관리'], ['tv', 'TV목록'], ['mv', '영화목록'], ['log', u'로그']
-            ],
-            'category' : 'fileprocess',
-            'sub2' : {
-                'base': [
-                    ['setting',u'설정'],['rulelist', u'경로규칙목록']
+        if use_setting:
+            menu = {
+                'main' : [package_name, u'GD바로가기관리'],
+                'sub' : [
+                    ['scmbase', u'라이브러리관리'], ['tv', 'TV목록'], ['mv', '영화목록'], ['log', u'로그']
                 ],
-            },
-        }
+                'category' : 'service',
+                'sub2' : {
+                    'scmbase': [
+                        ['setting',u'설정'],['rulelist', u'경로규칙목록']
+                    ],
+                },
+            }
+        else:
+            menu = {
+                'main' : [package_name, u'GD바로가기관리'],
+                'sub' : [
+                    ['scmbase', u'라이브러리관리'], ['tv', 'TV목록'], ['mv', '영화목록'], ['log', u'로그']
+                ],
+                'category' : 'service',
+                'sub2' : {
+                    'scmbase': [
+                        ['rulelist', u'경로규칙목록']
+                    ],
+                },
+            }
+
 
     plugin_info = {
         'version' : '0.1.0.0',
@@ -73,7 +102,7 @@ class P(object):
     ModelSetting = get_model_setting(package_name, logger)
     logic = None
     module_list = None
-    home_module = 'base'
+    home_module = 'scmbase'
 
 
 def initialize():

@@ -17,7 +17,6 @@ class ModelRuleItem(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     created_time = db.Column(db.DateTime)
     reserved = db.Column(db.JSON)
-
     name = db.Column(db.String)
     agent_type = db.Column(db.String)
     root_folder_id = db.Column(db.String)
@@ -29,14 +28,13 @@ class ModelRuleItem(db.Model):
     shortcut_count = db.Column(db.Integer)
     use_subfolder = db.Column(db.Boolean)
     subfolder_rule = db.Column(db.String)
-
     last_searched_time = db.Column(db.DateTime)
     use_schedule = db.Column(db.Boolean)
     use_plex = db.Column(db.Boolean)
+    use_auto_create_shortcut = db.Column(db.Boolean)
 
     def __init__(self, info):
         self.created_time = datetime.now()
-
         self.name = py_unicode(info['name'])
         self.agent_type = py_unicode(info['agent_type'])
         self.root_folder_id = py_unicode(info['root_folder_id'])
@@ -46,9 +44,9 @@ class ModelRuleItem(db.Model):
         self.target_full_path = py_unicode(info['target_full_path'])
         self.item_count = 0
         self.shortcut_count = 0
-
         self.use_sub_folder = info['use_subfolder']
         self.subfolder_rule = py_unicode(info['subfolder_rule'])
+        self.use_auto_create_shortcut = info['use_auto_create_shortcut']
         self.use_schedule = info['use_schedule']
         self.use_plex = info['use_plex']
         self.last_search_time = None
@@ -67,6 +65,11 @@ class ModelRuleItem(db.Model):
 
     def save(self):
         db.session.add(self)
+        db.session.commit()
+
+    @classmethod
+    def delete(cls, id):
+        db.session.query(cls).filter_by(id=id).delete()
         db.session.commit()
 
     @classmethod
@@ -232,6 +235,8 @@ class ModelTvMvItem(db.Model):
     plex_section_id = db.Column(db.String)
     plex_metadata_id = db.Column(db.String)
 
+    excluded = db.Column(db.Boolean)
+
     def __init__(self, name, folder_id, rule_name, rule_id):
         self.created_time = datetime.now()
         self.name = py_unicode(name)
@@ -240,6 +245,7 @@ class ModelTvMvItem(db.Model):
         self.rule_id = rule_id
         self.shortcut_created = False
         self.updated_time = datetime.now()
+        self.excluded = False
 
     def __repr__(self):
         return repr(self.as_dict())
@@ -260,6 +266,11 @@ class ModelTvMvItem(db.Model):
         db.session.commit()
 
     @classmethod
+    def delete_items_by_rule_id(cls, rule_id):
+        db.session.query(cls).filter_by(rule_id=rule_id).delete()
+        db.session.commit()
+
+    @classmethod
     def get_by_id(cls, id):
         return db.session.query(cls).filter_by(id=id).first()
     
@@ -272,8 +283,8 @@ class ModelTvMvItem(db.Model):
         return db.session.query(cls).filter_by(code=code).first()
 
     @classmethod
-    def get_shortcut_created_entities(cls):
-        return db.session.query(cls).filter_by(shortcut_created=shortcut_created).first()
+    def get_shortcut_created_entities(cls, rule_id):
+        return db.session.query(cls).filter(and_(cls.rule_id==rule_id, cls.shortcut_created==True)).all()
 
     @classmethod
     def get_all_entities(cls):
@@ -282,6 +293,14 @@ class ModelTvMvItem(db.Model):
     @classmethod
     def get_onair_entities(cls):
         return db.session.query(cls).filter_by(status=1).all()
+
+    @classmethod
+    def get_item_count(cls, rule_id):
+        return db.session.query(cls).filter_by(rule_id=rule_id).count()
+
+    @classmethod
+    def get_shortcut_count(cls, rule_id):
+        return db.session.query(cls).filter(and_(cls.rule_id==rule_id, cls.shortcut_created==True)).count()
 
     @classmethod
     def get_onair_entities_with_shortcut(cls):
@@ -298,11 +317,11 @@ class ModelTvMvItem(db.Model):
         else: # ktv/ftv
             query = query.filter(or_(cls.agent_type=='ktv', cls.agent_type=='ftv'))
         return query.group_by(cls.genre).order_by(func.count(cls.id).desc()).all()
-    	"""
+
+    @classmethod
+    def get_all_entities_group_by_parent(cls, rule_id):
         query = db.session.query(cls)
-        query = query.filter(cls.agent_type==agent_type)
-        return query.distinct(cls.genre).group_by(cls.genre).all()
-	"""
+        return query.filter(cls.rule_id==rule_id).group_by(cls.parent_folder_id).all()
 
     @classmethod
     def get_item_count(cls, rule_id):
@@ -325,8 +344,8 @@ class ModelTvMvItem(db.Model):
 	    if 'genre' in req.form:
                 genre = req.form['genre']
             rule_name = req.form['category'] if 'category' in req.form else 'all'
-            shortcut_status = req.form['shortcut_status'] if 'shortcut_status' in req.form else 'all'
-            query = cls.make_query(module_name=module_name, genre=genre, search=search, rule_name=rule_name, shortcut_status=shortcut_status)
+            status_option = req.form['status_option'] if 'status_option' in req.form else 'all'
+            query = cls.make_query(module_name=module_name, genre=genre, search=search, rule_name=rule_name, status_option=status_option)
             count = query.count()
             query = query.limit(page_size).offset((page-1)*page_size)
             logger.debug('cls count:%s', count)
@@ -339,7 +358,7 @@ class ModelTvMvItem(db.Model):
             logger.error(traceback.format_exc())
 
     @classmethod
-    def make_query(cls, module_name='', genre='all', search='', rule_name='all', shortcut_status='all', order='desc'):
+    def make_query(cls, module_name='', genre='all', search='', rule_name='all', status_option='all', order='desc'):
         query = db.session.query(cls)
         if module_name != '':
             if module_name == 'movie': query = query.filter(cls.agent_type == 'movie')
@@ -364,9 +383,15 @@ class ModelTvMvItem(db.Model):
         if rule_name != 'all':
             query = query.filter(cls.rule_name == rule_name)
 
-        if shortcut_status != 'all':
-            if shortcut_status == 'true': query = query.filter(cls.shortcut_created == True)
-            else: query = query.filter(cls.shortcut_created == False)
+        if status_option == 'excluded':
+            query = query.filter(cls.excluded == True)
+        else:
+            query = query.filter(cls.excluded == False)
+            if status_option != 'all':
+                if status_option == 'true': query = query.filter(cls.shortcut_created == True)
+                elif status_option == 'onair': query = query.filter(cls.status == 1)
+                elif status_option == 'ended': query = query.filter(cls.status == 2)
+                else: query = query.filter(cls.shortcut_created == False)
 
         if order == 'desc':
             query = query.order_by(desc(cls.id))
@@ -429,12 +454,15 @@ class ModelAvItem(db.Model):
     plex_section_id = db.Column(db.String)
     plex_metadata_id = db.Column(db.String)
 
+    excluded = db.Column(db.Boolean)
+
     def __init__(self, ui_code, folder_id):
         self.created_time = datetime.now()
         self.ui_code = py_unicode(ui_code)
         self.folder_id = py_unicode(folder_id)
         self.shortcut_created = False
         self.shortcut_count = 0
+        self.excluded = False
 
     def __repr__(self):
         return repr(self.as_dict())
@@ -446,6 +474,16 @@ class ModelAvItem(db.Model):
 
     def save(self):
         db.session.add(self)
+        db.session.commit()
+
+    @classmethod
+    def delete(cls, id):
+        db.session.query(cls).filter_by(id=id).delete()
+        db.session.commit()
+
+    @classmethod
+    def delete_items_by_rule_id(cls, rule_id):
+        db.session.query(cls).filter_by(rule_id=rule_id).delete()
         db.session.commit()
 
     @classmethod
@@ -489,6 +527,19 @@ class ModelAvItem(db.Model):
         return db.session.query(cls).filter_by(rule_id=rule_id).count()
 
     @classmethod
+    def get_shortcut_count(cls, rule_id):
+        return db.session.query(cls).filter(and_(cls.rule_id==rule_id, cls.shortcut_created==True)).count()
+
+    @classmethod
+    def get_shortcut_created_entities(cls, rule_id):
+        return db.session.query(cls).filter(and_(cls.rule_id==rule_id, cls.shortcut_created==True)).all()
+
+    @classmethod
+    def get_all_entities_group_by_parent(cls, rule_id):
+        query = db.session.query(cls)
+        return query.filter(cls.rule_id==rule_id).group_by(cls.parent_folder_id).all()
+
+    @classmethod
     def web_list(cls, req):
         try:
             ret = {}
@@ -502,8 +553,8 @@ class ModelAvItem(db.Model):
             if 'search_word' in req.form:
                 search = req.form['search_word']
             rule_name = req.form['category'] if 'category' in req.form else 'all'
-            shortcut_status = req.form['shortcut_status'] if 'shortcut_status' in req.form else 'all'
-            query = cls.make_query(search=search, rule_name=rule_name, shortcut_status=shortcut_status)
+            status_option = req.form['status_option'] if 'status_option' in req.form else 'all'
+            query = cls.make_query(search=search, rule_name=rule_name, status_option=status_option)
             count = query.count()
             query = query.limit(page_size).offset((page-1)*page_size)
             logger.debug('cls count:%s', count)
@@ -517,7 +568,7 @@ class ModelAvItem(db.Model):
             logger.error(traceback.format_exc())
     
     @classmethod
-    def make_query(cls, search='', rule_name='all', shortcut_status='all', order='desc'):
+    def make_query(cls, search='', rule_name='all', status_option='all', order='desc'):
         query = db.session.query(cls)
         #if agent_type != 'all': query = query.filter(cls.agent_type == agent_type)
         if search is not None and search != '':
@@ -539,9 +590,13 @@ class ModelAvItem(db.Model):
         if rule_name != 'all':
             query = query.filter(cls.rule_name == rule_name)
 
-        if shortcut_status != 'all':
-            if shortcut_status == 'true': query = query.filter(cls.shortcut_created == True)
-            else: query = query.filter(cls.shortcut_created == False)
+        if status_option == 'excluded':
+            query = query.filter(cls.excluded == True)
+        else:
+            query = query.filter(cls.excluded == False)
+            if status_option != 'all':
+                if status_option == 'true': query = query.filter(cls.shortcut_created == True)
+                else: query = query.filter(cls.shortcut_created == False)
 
         if order == 'desc':
             query = query.order_by(desc(cls.id))
@@ -567,10 +622,10 @@ class ModelSubFolderItem(db.Model):
     def __init__(self, name, rule_id, folder_id, parent_folder_id):
         self.created_time = datetime.now()
 
-        self.name = py_unicode(info['name'])
+        self.name = py_unicode(name)
         self.rule_id = rule_id
-        self.folder_id = py_unicode(info['folder_id'])
-        self.parent_folder_id = py_unicode(info['parent_folder_id'])
+        self.folder_id = py_unicode(folder_id)
+        self.parent_folder_id = py_unicode(parent_folder_id)
 
     def __repr__(self):
         return repr(self.as_dict())

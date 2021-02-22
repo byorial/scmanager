@@ -11,10 +11,11 @@
             <select name='category'>
               <option value="all">전체경로</option>
             </select>
-            <select name='shortcut_status'>
+            <select name='status_option'>
               <option value="all">전체상태</option>
               <option value="true">숏컷생성</option>
               <option value="false">숏컨미생성</option>
+              <option value="excluded">제외목록</option>
             </select>
          </span>
          <span class="col-md-6">
@@ -170,6 +171,9 @@ function make_list(data) {
     tr_actors = text_truncate(actors, 14);
     if (actors.length > 16) {str += '배우: <span aria-label="'+actors+'" data-balloon-pos="down", data-balloon-length="medium">'+tr_actors+'</span><br>';}
     else {str += '배우: '+tr_actors+'<br>';}
+    if (data[i].trailer_url.startsWith('http')) {
+      str += '예고편: <span class="card-link" onmouseover="" style="cursor: pointer;" onclick="play_trailer(\''+data[i].trailer_url+'\');"><strong>예고편보기</strong></span>';
+    }
     str += '</small>';
     str += '</p>';
     str += '<div class="d-flex justify-content-between align-items-center" style="padding:2px 1px 2px 1px;"><br>';
@@ -178,11 +182,16 @@ function make_list(data) {
     if (data[i].shortcut_created == false) {
       tmp += m_button_tt('shortcut_create_btn', 'P', [{'key':'id', 'value':data[i].id}], 'info', '해당작품을 Plex에 추가', 'down-left', 'small');
       tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보 검색/갱신', 'down', 'small');
-      tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down-right', 'small');
+      //tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down-right', 'small');
     } else {
       tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보 검색/갱신', 'down-left', 'small');
-      tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down', 'small');
+      //tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down', 'small');
       tmp += m_button_tt('shortcut_remove_btn', 'D', [{'key':'id', 'value':data[i].id}], 'danger', '해당작품을 Plex에서 삭제', 'down-right', 'small');
+    }
+    if (data[i].excluded == false) {
+      tmp += m_button_tt('add_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에서 제외하기', 'down-right', 'small');
+    } else {
+      tmp += m_button_tt('del_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에 추가하기', 'down-right', 'small');
     }
     btn_str = m_button_group(tmp);
     str += btn_str;
@@ -407,13 +416,17 @@ function refresh_info(id) {
 $("body").on('click', '#play_trailer_btn', function(e){
   e.preventDefault();
   var trailer_url = $(this).data('trailer_url');
+  play_trailer(trailer_url);
+});
+
+function play_trailer(trailer_url) {
   if (trailer_url.startsWith('http')) {
     str = '<video oncontextmenu="return false;" id="trailer" width="100%" controls autoplay preload="metadata">';
     str += '<source src="' + trailer_url + '" type="video/mp4"></video>';
     document.getElementById("play_trailer_video").innerHTML = str;
     $("#play_trailer_modal").modal();
   }
-});
+}
 
 $("#play_trailer_modal").on('hidden.bs.modal', function () {
   document.getElementById("trailer").pause();
@@ -473,6 +486,31 @@ function get_children_info(id) {
       } else {
         $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
       }
+    }
+  });
+}
+
+$("body").on('click', '#add_excluded_btn, #del_excluded_btn', function(e){
+  e.preventDefault();
+  var action = $(this).attr('id').split('_')[0];
+  id = $(this).data('id');
+  change_excluded(id, action);
+});
+
+function change_excluded(id, action) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/change_excluded',
+    type: "POST",
+    cache: false,
+    data: {'id':id, 'action':action},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
     }
   });
 }

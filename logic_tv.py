@@ -58,23 +58,25 @@ class LogicTv(LogicModuleBase):
                 ret = ModelTvMvItem.web_list(self.name, req)
             elif sub == 'create_shortcut':
                 entity_id = int(req.form['id'])
-                ret = LogicTv.create_shortcut(entity_id)
+                ret = LogicBase.create_shortcut(self.name, entity_id)
             elif sub == 'remove_shortcut':
                 entity_id = int(req.form['id'])
-                ret = LogicTv.remove_shortcut(entity_id)
+                ret = LogicBase.remove_shortcut(self.name, entity_id)
             elif sub == 'metadata_search':
                 agent_type = req.form['meta_agent_type']
                 title = req.form['meta_search_word']
                 ret = ScmUtil.search_metadata(agent_type, title, get_list=True)
             elif sub == 'apply_meta':
-                logger.debug(req.form)
                 ret = ScmUtil.apply_meta(self.name, req)
             elif sub == 'refresh_info':
-                entity_id = int(req.form['id'])
-                ret = LogicBase.refresh_info(entity_id)
+                ret = ScmUtil.refresh_info(self.name, req)
             elif sub == 'get_children':
-                entity_id = int(req.form['id'])
-                ret = ScmUtil.get_children(self.name, entity_id)
+                db_id = int(req.form['id'])
+                ret = ScmUtil.get_children(self.name, db_id)
+            elif sub == 'change_excluded':
+                db_id = int(req.form['id'])
+                action = req.form['action']
+                ret = ScmUtil.change_excluded(self.name, db_id, action)
             return jsonify(ret)
 
         except Exception as e: 
@@ -83,12 +85,8 @@ class LogicTv(LogicModuleBase):
             return jsonify({'ret':'exception', 'log':str(e)})
 
     def scheduler_function(self):
-        logger.debug('scheduler function!!!!!!!!!!!!!!')
-        if app.config['config']['use_celery']:
-            result = LogicBase.task.apply_async()
-            result.get()
-        else:
-            LogicBase.task()
+        logger.debug('tv scheduler function!!!!!!!!!!!!!!')
+        LogicTv.task()
 
     #########################################################
     @staticmethod
@@ -119,141 +117,29 @@ class LogicTv(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
-    def create_shortcut(db_id):
+    def task():
         try:
-            entity = ModelTvMvItem.get_by_id(db_id)
-            shortcut_name = ScmUtil.get_shortcut_name(entity)
-            logger.debug('create_shortcut: title(%s), shortcut(%s)', entity.title, shortcut_name)
+            logger.debug('[tv_schedule] start tv scheduler')
+            service = None
+            service = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'), return_service=True)
+            if service == None:
+                data = {'type':'warning', 'msg':u'서비스계정 인증에 실패하여 스케쥴러를 실행할 수 없습니다.'}
+                socketio.emit("notify", data, namespace='/framework', broadcate=True)
+                logger.error('[tv_schdule]: failed to authorize sa accounts(%s)', ModelSetting.get('gdrive_auth_path'))
 
-            # TODO: subfolder rule 적용
-            ret  = LibGdrive.create_shortcut(shortcut_name, entity.folder_id, entity.target_folder_id)
-            if ret['ret'] != 'success':
-                logger.error('failed to create shortcut')
-                return { 'ret':'error', 'msg':'생성실패! 로그를 확인해주세요.' }
+            entities = ModelTvMvItem.get_onair_entities_with_shortcut()
+            count = len(entities)
+            logger.debug('[tv_schedule] target onair item: %d', count)
 
-            shortcut = ret['data']
-            # entity update
-            entity.shortcut_created = True
-            entity.shortcut_folder_id = py_unicode(shortcut['id'])
-            entity.gdrive_path = LibGdrive.get_gdrive_full_path(entity.shortcut_folder_id)
-            entity.plex_path = ScmUtil.get_plex_path(entity.gdrive_path)
-            entity.local_path = ScmUtil.get_local_path(entity.gdrive_path)
-            logger.debug('gdpath(%s),plexpath(%s)', entity.gdrive_path, entity.plex_path)
-            entity.save()
+            for entity in entities:
+                children = LibGdrive.get_children(entity.folder_id, time_after=entity.updated_time, service=service)
+                logger.debug(u'[tv_schedule] title:{}, 에피소트 추가 내역: {}'.format(entity.title, u'없음' if len(children) == 0 else '{} 건'.format(len(children))))
+                if len(children) > 0:
+                    logger.debug('[tv_schedule] new episode found, send_scan(%s)', entity.title)
+                    LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'REFRESH', 'now':datetime.now()})
 
-            rule = ModelRuleItem.get_by_id(entity.rule_id)
-            rule.shortcut_count = rule.shortcut_count + 1
-            rule.save()
-
-            logger.debug(u'바로가기 생성완료(%s)', entity.shortcut_folder_id)
-            ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}'.format(n=entity.name) }
-
-            if rule.use_plex:
-                LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'action':'ADD', 'now':datetime.now()})
-                ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}, 스캔명령 전송대기'.format(n=entity.name) }
-            return ret
+            logger.debug('[tv_schedule] end tv scheduler')
 
         except Exception as e:
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
-            return { 'ret':'error', 'msg':'생성실패! 로그를 확인해주세요.' }
-
-
-    @staticmethod
-    def remove_shortcut(db_id):
-        try:
-            entity = ModelTvMvItem.get_by_id(db_id)
-            logger.debug('remove_shortcut: title(%s), shortcut(%s)', entity.title, os.path.basename(entity.plex_path))
-            trash_folder_id = ModelSetting.get('trash_folder_id')
-
-            if ModelSetting.get_bool('use_trash'):
-                finfo = LibGdrive.get_file_info(ModelSetting.get('trash_folder_id'))
-                if finfo['ret'] != 'success':
-                    return { 'ret':'error', 'msg':'삭제실패! 휴지통 폴더ID를 확인해주세요.' }
-
-                ret = LibGdrive.move_file(entity.shortcut_folder_id, entity.target_folder_id, ModelSetting.get('trash_folder_id'))
-            else:
-                ret = LibGdrive.delete_file(entity.shortcut_folder_id)
-
-            if ret['ret'] != 'success':
-                return { 'ret':'error', 'msg':'삭제실패! 로그를 확인해주세요.' }
-
-            entity.shortcut_created = False
-            entity.shortcut_folder_id = u''
-            entity.save()
-
-            logger.debug(u'바로가기 삭제완료(%s)', entity.shortcut_folder_id)
-
-            rule = ModelRuleItem.get_by_id(entity.rule_id)
-            rule.shortcut_count = rule.shortcut_count - 1
-            rule.save()
-            ret = { 'ret':'success', 'msg':'바로가기 삭제완료{n}'.format(n=entity.title) }
-
-            if rule.use_plex:
-                LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'action':'REMOVE', 'now':datetime.now()})
-                ret = { 'ret':'success', 'msg':'바로가기 삭제 성공{n}, 스캔명령 전송대기'.format(n=entity.name) }
-            return ret
-
-        except Exception as e:
-            logger.debug('Exception:%s', e)
-            logger.debug(traceback.format_exc())
-            return { 'ret':'error', 'msg':'삭제실패! 로그를 확인해주세요.' }
-
-    @staticmethod
-    def apply_meta(req):
-        try:
-            db_id = int(req.form['id'])
-            entity = ModelTvMvItem.get_by_id(db_id)
-
-            code = req.form['code']
-            title = req.form['title']
-            site = req.form['site']
-
-            info = ScmUtil.info_metadata(entity.agent_type, code, title)
-            if info == None:
-                logger.error(u'메타정보 조회실패: %s:%s', rule.agent_type, title)
-                return { 'ret':'error', 'msg':'"{}"의 메타정보 조회실패.'.format(title) }
-
-            entity.code = py_unicode(info['code'])
-            entity.status = info['status']
-            entity.site = py_unicode(info['site'])
-            entity.poster_url = py_unicode(info['poster_url'])
-            entity.studio = py_unicode(info['studio'])
-            entity.year = py_unicode(info['year'])
-            entity.genre = py_unicode(info['genre'])
-            entity.title = py_unicode(title)
-            entity.save()
-            
-            return { 'ret':'success', 'msg':'"{}"의 메타정보 적용완료.'.format(entity.title) }
-
-        except Exception as e:
-            logger.debug('Exception:%s', e)
-            logger.debug(traceback.format_exc())
-            return { 'ret':'error', 'msg':'에러발생! 로그를 확인해주세요.' }
-
-
-
-    @staticmethod
-    def refresh_info(db_id):
-        try:
-            entity = ModelTvMvItem.get_by_id(db_id)
-            info = ScmUtil.info_metadata(entity.agent_type, entity.code, entity.title)
-            if info == None:
-                logger.debug(u'메타정보 조회실패: %s:%s', rule.agent_type, entity.title)
-                return { 'ret':'error', 'msg':'메타정보 조회실패({})'.format(entity.title) }
-
-            entity.code = py_unicode(info['code'])
-            entity.status = info['status']
-            entity.site = py_unicode(info['site'])
-            entity.poster_url = py_unicode(info['poster_url'])
-            entity.studio = py_unicode(info['studio'])
-            entity.year = py_unicode(info['year'])
-            entity.save()
-            
-            return { 'ret':'success', 'msg':'메타정보 갱신 성공({})'.format(entity.title) }
-
-        except Exception as e:
-            logger.debug('Exception:%s', e)
-            logger.debug(traceback.format_exc())
-            return { 'ret':'error', 'msg':'메타정보 갱신 실패! 로그를 확인해주세요.' }
-

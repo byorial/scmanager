@@ -49,13 +49,11 @@ class ScmUtil(LogicModuleBase):
             info['max_depth'] = req.form['max_depth']
             info['target_folder_id'] = py_urllib.unquote(req.form['target_folder_id'])
             info['target_full_path'] = py_urllib.unquote(req.form['target_full_path'])
-            ### TODO
-            info['use_subfolder'] = False
-            info['subfolder_rule'] = u''
-            #info['use_subfolder'] = True if req.form['use_subfolder'] == 'True' else False
-            #info['subfolder_rule'] = py_urllib.unquote(req.form['subfolder_rule'])
+            info['use_subfolder'] = True if req.form['use_subfolder'] == 'True' else False
+            info['subfolder_rule'] = py_urllib.unquote(req.form['subfolder_rule'])
             info['use_plex'] = True if req.form['use_plex'] == 'True' else False
             info['use_schedule'] = True if req.form['use_schedule'] == 'True' else False
+            info['use_auto_create_shortcut'] = True if req.form['use_auto_create_shortcut'] == 'True' else False
 
             entity = ModelRuleItem(info)
             entity.save()
@@ -76,15 +74,30 @@ class ScmUtil(LogicModuleBase):
             entity.max_depth = req.form['curr_max_depth']
             entity.target_folder_id = py_urllib.unquote(req.form['curr_target_folder_id'])
             entity.target_full_path = py_urllib.unquote(req.form['curr_target_full_path'])
-            ### TODO
-            entity.use_subfolder = False
-            entity.subfolder_rule = u''
-            #entity.use_subfolder = True if req.form['curr_use_subfolder'] == 'True' else False
-            #entity.subfolder_rule = py_urllib.unquote(req.form['curr_subfolder_rule'])
+            entity.use_subfolder = True if req.form['curr_use_subfolder'] == 'True' else False
+            entity.subfolder_rule = py_urllib.unquote(req.form['curr_subfolder_rule'])
             entity.use_plex = True if req.form['curr_use_plex'] == 'True' else False
             entity.use_schedule = True if req.form['curr_use_schedule'] == 'True' else False
+            entity.use_auto_create_shortcut = True if req.form['curr_use_auto_create_shortcut'] == 'True' else False
             entity.save()
             return {'ret':'success', 'msg':u'{n} 항목이 수정 되었습니다.'.format(n=entity.name)} 
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+
+    @staticmethod
+    def update_rule_count(req):
+        try:
+            id = int(req.form['id'])
+            rule = ModelRuleItem.get_by_id(id)
+            if rule.agent_type.startswith('av'):
+                rule.item_count = ModelAvItem.get_item_count(rule.id)
+                rule.shortcut_count = ModelAvItem.get_shortcut_count(rule.id)
+            else:
+                rule.item_count = ModelTvMvItem.get_item_count(rule.id)
+                rule.shortcut_count = ModelTvMvItem.get_shortcut_count(rule.id)
+            rule.save()
+            return {'ret':'success', 'msg':u'항목건수 동기화 완료: item({}),shortcut({})'.format(rule.item_count, rule.shortcut_count)} 
         except Exception as e:
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
@@ -157,50 +170,58 @@ class ScmUtil(LogicModuleBase):
     def create_subfolder(rule_str, entity):
         try:
             rule_map = {
-                    'ktv'  : ['year' ,'genre','studio'],
-                    'ftv'  : ['year' ,'genre','studio'],
+                    'ktv'  : ['status','genre','country', 'studio'],
+                    'ftv'  : ['status','genre','country', 'studio'],
                     'movie': ['year' ,'genre','country'],
                     'avdvd': ['label' ,'actor'],
-                    'avama': ['label' ,'actor'],
+                    'avama': ['label' ,'actor']
                     }
-            agent_type == entity.agent_type
+            agent_type = entity.agent_type
             dict_entity = entity.as_dict()
+
+            # AV의 경우 첫번째 배우만 처리함:TODO-추후 여러개 바로가기 처리 생성 고려필요
+            if agent_type.startswith('av'):
+                actor = entity.actor.split(u'|')[0]
+                dict_entity['actor'] = actor
 
             for keyword in rule_map[entity.agent_type]:
                 if rule_str.find('{'+keyword+'}') != -1:
                     rule_str = rule_str.replace('{'+keyword+'}', py_unicode(str(dict_entity[keyword])))
 
+            rule_str = re.sub('{[a-z]+}', '', rule_str).strip()
             logger.debug('target subfolder name({})'.format(rule_str))
 
             parent_folder_id = entity.target_folder_id
-            subfolders = rule_str.split('/')
+            subfolders = rule_str.split(u'/')
             # exist: aaa/bbb
             # rule : aaa/bbb/ccc
             # sub  : aaa, bbb, 
             rm_target = []
             for folder in subfolders:
                 sfentity = None
-                sfentity = get_by_rule_name_parent(entity.rule_id, folder, parent_folder_id)
+                sfentity = ModelSubFolderItem.get_by_rule_name_parent(entity.rule_id, folder, parent_folder_id)
                 if sfentity != None: 
                     rm_target.append(folder)
                     parent_folder_id = sfentity.id
+                else: break
 
             for folder in rm_target: subfolders.remove(folder)
             if len(subfolders) == 0:
                 logger.debug('target subfolder already exists({})'.format(rule_str))
                 return parent_folder_id
 
-            subfolder_name = u'/'.join(subfolders)
-            ret = LibGdrive.create_sub_folder(subfolder_name, parent_folder_id)
-
-            if ret['ret'] == 'success':
-                for f in ret['data']:
+            logger.debug('create subfolder: (%s)', '/'.join(subfolders))
+            for folder in subfolders:
+                ret = LibGdrive.create_sub_folder(folder, parent_folder_id)
+                if ret['ret'] == 'success':
+                    f = ret['data']
                     sfentity = ModelSubFolderItem(f['name'], entity.rule_id, f['folder_id'], f['parent_folder_id'])
                     sfentity.save()
-                # 최하위 폴더ID 리턴   
-                return sfentity.folder_id
-            else: return None
-
+                    parent_folder_id = f['folder_id']
+                else:
+                    logger.error('failed to create sub-folder({})'.format(ret['msg']))
+                    return None
+            return parent_folder_id
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
@@ -216,12 +237,13 @@ class ScmUtil(LogicModuleBase):
     @staticmethod
     def get_shortcut_name(entity):
         try:
+            #TODO:
             rule_map = {
-                    'ktv'  : ['year' ,'genre','studio'],
-                    'ftv'  : ['year' ,'genre','studio'],
+                    'ktv'  : ['year' ,'genre','status'],
+                    'ftv'  : ['year' ,'genre','status'],
                     'movie': ['year' ,'genre','country'],
-                    'avdvd': ['code' ,'year' ,'genre','studio'],
-                    'avama': ['code' ,'year' ,'genre','studio'],
+                    'avdvd': ['ui_code' ,'year' ,'genre','studio'],
+                    'avama': ['ui_code' ,'year' ,'genre','studio'],
                     }
 
             key = '{}_shortcut_name_rule'.format(entity.agent_type)
@@ -243,10 +265,8 @@ class ScmUtil(LogicModuleBase):
     def apply_meta(module_name, req):
         try:
             db_id = int(req.form['id'])
-            if module_name == 'av':
-                entity = ModelAvItem.get_by_id(db_id)
-            else:
-                entity = ModelTvMvItem.get_by_id(db_id)
+            if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
 
             code = req.form['code']
             title = req.form['title']
@@ -298,9 +318,11 @@ class ScmUtil(LogicModuleBase):
 
 
     @staticmethod
-    def refresh_info(db_id):
+    def refresh_info(module_name, req):
         try:
-            entity = ModelTvMvItem.get_by_id(db_id)
+            db_id = int(req.form['id'])
+            if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
             info = ScmUtil.info_metadata(entity.agent_type, entity.code, entity.title)
             if info == None:
                 logger.debug(u'메타정보 조회실패: %s:%s', rule.agent_type, entity.title)
@@ -366,7 +388,7 @@ class ScmUtil(LogicModuleBase):
     def get_all_genres(module_name):
         try:
             entities = ModelTvMvItem.get_all_genres(module_name)
-            genres = list(set([x.genre for x in entities]))
+            genres = [x.genre for x in entities]
             return list(filter(None, genres))
         except Exception as e:
             logger.debug('Exception:%s', e)
@@ -463,6 +485,38 @@ class ScmUtil(LogicModuleBase):
         return meta_list
 
     @staticmethod
+    def get_ftv_meta_list(metadata):
+        meta_list = []
+        for site in metadata:
+            if site == 'daum': 
+                m = metadata[site]
+                info = {}
+                info['site'] = site
+                info['code'] = m['code']
+                info['title'] = m['title']
+                info['genre'] = m['genre']
+                info['studio'] = m['studio']
+                info['score'] = m['score']
+                info['poster_url'] = m['image_url']
+                meta_list.append(info)
+            else:
+                count = 0
+                for m in metadata[site]:
+                    if ModelSetting.get_int('ftv_meta_result_limit_per_site') == count: break
+                    info = {}
+                    info['site'] = site
+                    info['code'] = m['code']
+                    info['title'] = m['title']
+                    info['genre'] = m['genre']
+                    info['studio'] = m['studio']
+                    info['score'] = m['score']
+                    info['poster_url'] = m['image_url']
+                    count += 1
+                    meta_list.append(info)
+
+        return meta_list
+
+    @staticmethod
     def get_movie_meta_list(metadata):
         meta_list = []
         count = 0
@@ -471,6 +525,22 @@ class ScmUtil(LogicModuleBase):
             info['site'] = m['site']
             info['code'] = m['code']
             info['title'] = m['title']
+            info['year'] = m['year']
+            info['studio'] = u''
+            info['score'] = m['score']
+            info['poster_url'] = m['image_url']
+            meta_list.append(info)
+        return meta_list
+
+    @staticmethod
+    def get_av_meta_list(metadata):
+        meta_list = []
+        count = 0
+        for m in metadata:
+            info = {}
+            info['site'] = m['site']
+            info['code'] = m['code']
+            info['title'] = m['title_ko'] if m['title_ko'] != u'' else m['title']
             info['year'] = m['year']
             info['studio'] = u''
             info['score'] = m['score']
@@ -503,22 +573,24 @@ class ScmUtil(LogicModuleBase):
             metadata = agent_map[agent_type].search(title, manual=True)
         elif agent_type == 'movie':
             metadata = agent_map[agent_type].search(title, year, manual=True)
-        elif agent_type == 'avdvd':
+        elif agent_type == 'avdvd' or agent_type == 'avama':
             metadata = agent_map[agent_type].search(title, all_find=True, do_trans=True)
             #logger.debug(json.dumps(metadata, indent=2))
 
         if get_list:
             if agent_type == 'ktv': meta_list = ScmUtil.get_ktv_meta_list(metadata)
-            else: meta_list = ScmUtil.get_movie_meta_list(metadata)
+            elif agent_type == 'ftv': meta_list = ScmUtil.get_ftv_meta_list(metadata)
+            elif agent_type == 'movie': meta_list = ScmUtil.get_movie_meta_list(metadata)
+            else: meta_list = ScmUtil.get_av_meta_list(metadata)
             return {'ret':'success', 'data':meta_list}
 
         info = {}
         for site in site_map[agent_type]:
-            if agent_type == 'ktv': # TV
+            if agent_type.endswith('tv'):
                 if site in metadata:
                     if site != 'daum': r = metadata[site][0]
                     else: r = metadata[site]
-                    logger.debug('TEST: code:%s, title:%s', r['code'], r['title'])
+                    #logger.debug('TEST: code:%s, title:%s', r['code'], r['title'])
                     info['code'] = r['code']
                     info['status'] = r['status'] if 'status' in r else 2
                     info['title'] = r['title']
@@ -606,6 +678,7 @@ class ScmUtil(LogicModuleBase):
         from metadata.logic_ktv import LogicKtv
         from metadata.logic_movie import LogicMovie
         from metadata.logic_ftv import LogicFtv
+        from metadata.logic_ott_show import LogicOttShow
         from metadata.logic_jav_censored import LogicJavCensored
         from metadata.logic_jav_censored_ama import LogicJavCensoredAma
 
@@ -626,11 +699,38 @@ class ScmUtil(LogicModuleBase):
         if agent_type == 'ktv':
             metadata = agent_map[agent_type].info(code, title)
             if metadata == None:
+                import framework.wavve.api as Wavve
+                import framework.tving.api as Tving
+
+                if code[1] == 'W':
+                    info = {}
+                    r = Wavve.vod_programs_programid(code[2:])
+                    if r == {}: return None
+                    info['code'] = code
+                    info['status'] = 1 if r['onair'] == "y" else 2
+                    info['title'] = r['programtitle']
+                    info['site'] = 'wavve'
+                    info['poster_url'] = r['posterimage'] if 'posterimage' in r else ''
+                    info['studio'] = r['cpname']
+                    if 'firstreleasedate' in r:
+                        if r['firstreleasedate'] == '': info['year'] = 1900
+                        else: info['year'] = int(r['firstreleasedate'][:4])
+                    else: info['year'] = 1900
+                    info['genre'] = u'기타'
+                    info['country'] = u'한국'
+                    return info
+
+                # OTT SHOW
+                metadata = LogicOttShow(LogicOttShow).info(code)
+                logger.debug(json.dumps(metadata, indent=2))
+                # TODO:
+                """
                 prefix = ScmUtil.get_additional_prefix_by_code(agent_type, code)
                 if prefix == u'': return None
                 tmp = prefix + ' ' + title
                 logger.debug('meta info failed add prefix(%s)', tmp)
                 metadata = agent_map[agent_type].info(code, tmp)
+                """
         else:
             metadata = agent_map[agent_type].info(code)
 
@@ -804,3 +904,17 @@ class ScmUtil(LogicModuleBase):
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
             return None
+
+    @staticmethod
+    def change_excluded(module_name, db_id, action):
+        try:
+            if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
+            entity.excluded = True if action == 'add' else False
+            entity.save()
+            return {'ret':'success', 'msg':'제외목록 반영완료.'}
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return {'ret':'error', 'msg':'제외목록 반영실패.'}
+

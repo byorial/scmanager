@@ -7,6 +7,7 @@
   {{ macros.m_row_end() }}
   <form id='setting' name='setting'>
     {{ macros.setting_checkbox('use_av', 'AV 사용여부', value=arg['use_av'], desc='On : AV 사용, 저장 후 재시작시 적용됨') }}
+    {{ macros.setting_checkbox('use_setting', '설정메뉴보이기', value=arg['use_setting'], desc='On : 설정메뉴 보임, Off : 설정관련 메뉴 숨김처리') }}
   </form>
 </div> <!--전체-->
 

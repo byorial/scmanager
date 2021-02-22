@@ -2,6 +2,7 @@
 {% block content %}
 
 
+{% if arg['use_setting'] == True %}
 <div>
   <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
     <div class="container-fluid">
@@ -54,10 +55,11 @@
 	  {{ macros.setting_input_int('max_depth', '경로탐색깊이', value='1', desc='탐색할 하위경로의 최대깊이를 지정, 영상폴더가 있는 위치') }}
 	  {{ macros.setting_input_text_and_buttons('target_folder_id', '타겟폴더ID', [['check_tpath_btn', '경로확인']], desc=['바로가기를 생성할 루트폴더 ID']) }}
 	  {{ macros.info_text('target_full_path', '타겟경로')}}
-	  <!-- {{ macros.setting_checkbox('use_subfolder', '하위폴더생성여부') }}
-	   {{ macros.setting_input_text('subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }} -->
+	  {{ macros.setting_checkbox('use_subfolder', '하위폴더생성여부', desc=['On: 바로가기 생성시 폴더를 생성 후 하위에 바로가기생성']) }}
+	  {{ macros.setting_input_text('subfolder_rule', '하위폴더생성규칙', col=9, desc=['하위폴더 생성규칙, 지원값 - TV: {status},{genre},{country},{studio}', '영화: {year},{genre},{country}, AV: {actor},{label}']) }}
 	  {{ macros.setting_checkbox('use_plex', 'Plex연동여부') }}
 	  {{ macros.setting_checkbox('use_schedule', '스케쥴포함여부') }}
+	  {{ macros.setting_checkbox('use_auto_create_shortcut', '바로가기 자동생성', desc=['On: 해당규칙의 아이템에 대해 바로가기를 자동으로 생성합니다']) }}
 	</form>
       </div>
       <div class="modal-footer" style="align-items:right;">
@@ -85,10 +87,11 @@
 	  {{ macros.setting_input_int('curr_max_depth', '경로탐색깊이', desc='탐색할 하위경로의 최대깊이 지정, 영상폴더가 있는 위치') }}
 	  {{ macros.setting_input_text_and_buttons('curr_target_folder_id', '타겟폴더ID', [['check_mtpath_btn', '경로확인']], desc=['바로가기를 생성할 루트폴더 ID']) }}
 	  {{ macros.info_text('curr_target_full_path', '타겟경로')}}
-	  <!-- {{ macros.setting_checkbox('curr_use_subfolder', '하위폴더생성여부') }}
-	   {{ macros.setting_input_text('curr_subfolder_rule', '하위폴더규칙', col=9, desc=['하위폴더 생성 규칙']) }} -->
+	  {{ macros.setting_checkbox('curr_use_subfolder', '하위폴더생성여부', desc=['On: 바로가기 생성시 폴더를 생성 후 하위에 바로가기생성']) }}
+	  {{ macros.setting_input_text('curr_subfolder_rule', '하위폴더생성규칙', col=9, desc=['하위폴더 생성규칙, 지원값 - TV: {status},{genre},{country},{studio}', '영화: {year},{genre},{country}, AV: {actor},{label}']) }}
 	  {{ macros.setting_checkbox('curr_use_plex', 'Plex연동여부') }}
 	  {{ macros.setting_checkbox('curr_use_schedule', '스케쥴포함여부') }}
+	  {{ macros.setting_checkbox('curr_use_auto_create_shortcut', '바로가기 자동생성', desc=['On: 해당규칙의 아이템에 대해 바로가기를 자동으로 생성합니다']) }}
 	</form>
       </div>
       <div class="modal-footer" style="align-items:right;">
@@ -98,6 +101,7 @@
     </div>
   </div>
 </div>
+{% endif %}
 <!-- Modal: 룰 수정END -->
 
 
@@ -106,6 +110,7 @@ var package_name = "{{arg['package_name'] }}";
 var str_categories = "{{arg['categories'] }}";
 var sub = "{{arg['sub'] }}";
 var use_av = "{{arg['use_av']}}"
+var use_setting = "{{arg['use_setting']}}"
 var current_data = null;
 var current_page = 1;
 var current_rule = null;
@@ -114,9 +119,11 @@ var country = 'all';
 var categories = str_categories.split(',');
 
 $(document).ready(function(){
-  make_agent_type_options();
-  formData = get_formdata('#form_search');
-  request_search('1', true);
+  if (use_setting == 'True') {
+    make_agent_type_options();
+    formData = get_formdata('#form_search');
+    request_search('1', true);
+  }
 });
 
 function make_agent_type_options() {
@@ -132,9 +139,9 @@ function make_agent_type_options() {
 
 function make_select(type) {
   if (use_av == 'True') 
-    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
+    var data = [{value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
   else
-    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
+    var data = [{value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
   var str = '<select id="agent_type" name="agent_type" class="form-control form-control-sm">';
   for(var i = 0; i < data.length; i++) {
     if (type == data[i].value) {
@@ -149,9 +156,9 @@ function make_select(type) {
 
 function make_curr_select(type) {
   if (use_av == 'True') 
-    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
+    var data = [{value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}, {value: "avdvd", name: "AVDVD"}, {value: "avama", name:"AVAMA"}]
   else
-    var data = [{value:'all', name:'전체유형'}, {value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
+    var data = [{value: "ktv", name: "국내TV"}, {value: "ftv", name: "해외TV"}, {value: "movie", name: "영화"}]
   var str = '<select id="curr_agent_type" name="curr_agent_type" class="form-control form-control-sm">';
   for(var i = 0; i < data.length; i++) {
     if (type == data[i].value) {
@@ -239,12 +246,13 @@ function make_list(data) {
       tmp += '바로가기: 0 건<br>';
     } 
     str += m_col(2, tmp);
-    btn_str = m_button('rule_modify_modal_btn', '수정', [{'key':'idx', 'value':i }]);
-    btn_str += m_button2('rule_remove_btn', '삭제', [{'key':'id', 'value':data[i].id}], "danger");
-    btn_str += m_button2('rule_execute_btn', '갱신', [{'key':'id', 'value':data[i].id}], "info");
+    btn_str = m_button_tt('rule_modify_modal_btn', '규칙수정', [{'key':'idx', 'value':i }], 'success', tooltip='경로규칙을 수정합니다.', pos='up-left');
+    btn_str += m_button_tt('rule_update_count_btn', '건수확인', [{'key':'id', 'value':data[i].id}], "success", tooltip='대상규칙의 아이템/바로가기 건수를 DB기준으로 동기화합니다.', pos='up');
+    btn_str += m_button_tt('rule_execute_btn', '수동실행', [{'key':'id', 'value':data[i].id}], "info", tooltip='대상 경로의 목록을 탐색하고 아이템을 DB에 등록합니다.', pos='up-right');
     tmp = m_button_group(btn_str)
-    btn_str = m_button('remove_item_btn', '목록삭제', [{'key':'id', 'value':data[i].id}]);
-    btn_str += m_button('remove_shortcut_btn', '숏컷삭제', [{'key':'id', 'value':data[i].id}]);
+    btn_str = m_button_tt('remove_rule_btn', '규칙삭제', [{'key':'id', 'value':data[i].id}], "danger", tooltip='경로규칙을 삭제합니다. 등록된 바로가기와 아이템도 삭제됨', pos='down-left');
+    btn_str += m_button_tt('remove_item_btn', '목록삭제', [{'key':'id', 'value':data[i].id}], 'danger', tooltip='등록된 아이템 목록을 삭제(생성된 바로가기는 삭제하지않음)', pos='down');
+    btn_str += m_button_tt('remove_shortcut_btn', '숏컷삭제', [{'key':'id', 'value':data[i].id}], 'danger', tooltip='해당규칙에 의해 생성된 모든 바로가기를 삭제합니다.', pos='down-right');
     tmp2 = m_button_group(btn_str)
 
     str += m_col(3, tmp+'<br>'+tmp2)
@@ -301,7 +309,7 @@ $("body").on('click', '#rule_modify_btn', function(e){
     }
   });
   $("#rule_modify_modal").modal('hide');
-  location.reload();
+  request_search(current_page, true);
 });
 
 $("body").on('click', '#check_rpath_btn,#check_tpath_btn,#check_mrpath_btn,#check_mtpath_btn', function(e){
@@ -365,13 +373,13 @@ $("body").on('click', '#rule_modify_modal_btn', function(e) {
   document.getElementById('curr_max_depth').value = current_rule.max_depth;
   document.getElementById('curr_target_folder_id').value = current_rule.target_folder_id;
   document.getElementById('curr_target_full_path').innerHTML = current_rule.target_full_path;
-  //if (current_rule.use_sub_folder == true) {
-    //document.getElementById("curr_use_subfolder").value = 'on';
-    //$('#curr_use_subfolder').bootstrapToggle('on')
-  //} else {
-    //$('#curr_use_subfolder').bootstrapToggle('off')
-  //}
-  //document.getElementById('curr_subfolder_rule').value = current_rule.subfolder_rule;
+  if (current_rule.use_subfolder == true) {
+    document.getElementById("curr_use_subfolder").value = 'on';
+    $('#curr_use_subfolder').bootstrapToggle('on')
+  } else {
+    $('#curr_use_subfolder').bootstrapToggle('off')
+  }
+  document.getElementById('curr_subfolder_rule').value = current_rule.subfolder_rule;
   if (current_rule.use_plex == true) {
     document.getElementById("curr_use_plex").value = 'on';
     $('#curr_use_plex').bootstrapToggle('on')
@@ -383,6 +391,12 @@ $("body").on('click', '#rule_modify_modal_btn', function(e) {
     $('#curr_use_schedule').bootstrapToggle('on')
   } else {
     $('#curr_use_schedule').bootstrapToggle('off')
+  }
+  if (current_rule.use_auto_create_shortcut == true) {
+    document.getElementById("curr_use_auto_create_shortcut").value = 'on';
+    $('#curr_use_auto_create_shortcut').bootstrapToggle('on')
+  } else {
+    $('#curr_use_auto_create_shortcut').bootstrapToggle('off')
   }
   make_curr_select(current_rule.agent_type);
   $("#rule_modify_modal").modal();
@@ -432,7 +446,7 @@ function create_shortcut(id) {
       } else {
         $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
       }
-      //request_search(current_page);
+      request_search(current_page, false);
     }
   });
 }
@@ -461,10 +475,82 @@ function rule_execute(id) {
   });
 }
 
+$("body").on('click', '#rule_update_count_btn', function(e){
+  e.preventDefault();
+  id = $(this).data('id');
+  rule_update_count(id);
+});
+
+function rule_update_count(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/update_rule_count',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      request_search(current_page, false);
+    }
+  });
+}
+
+$("body").on('click', '#remove_rule_btn,#remove_item_btn,#remove_shortcut_btn', function(e){
+  e.preventDefault();
+  db_id = $(this).data('id');
+  target = $(this).attr('id').split('_')[1];
+  if (target == 'rule') {
+    var msg = '해당규칙과 등록된 모든 바로가기와 아이템을 삭제합니다.<br>';
+  } else if (target == 'item') {
+    var msg = '해당규칙에 등록된 모든 아이템을 삭제합니다.<br>(기존 생성된 바로가기는 유지됨)<br>';
+  } else {
+    var msg = '해당규칙에 등록된 모든 바로가기를 삭제합니다.<br>';
+  }
+  document.getElementById("confirm_title").innerHTML = "삭제확인";
+  document.getElementById("confirm_body").innerHTML = '<strong>'+msg+'</strong>이 작업은 되돌릴 수 없습니다.<br>삭제하시겠습니까?';
+  $('#confirm_button').attr('onclick', "rule_remove(target, db_id);");
+  $("#confirm_modal").modal();
+  return;
+});
+
+function rule_remove(target, db_id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/remove_rule',
+    type: "POST",
+    cache: false,
+    data: {target:target, 'id':db_id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      request_search(current_page, false);
+    }
+  });
+}
+
 $('#rule_register_modal').on('hidden.bs.modal', function () {
 })
 $('#rule_modify_modal').on('hidden.bs.modal', function () {
 })
+
+function m_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
+  var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
+  if (tooltip == '') str += ' aria-label="' +text+'"';
+  else str += ' aria-label="' +tooltip+'"';
+  str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
+  for ( var i in data) {
+    str += ' data-' + data[i].key + '="' + data[i].value+ '" '
+  }
+  str += '>' + text + '</button>';
+  return str;
+}
 
 </script>    
 {% endblock %}
