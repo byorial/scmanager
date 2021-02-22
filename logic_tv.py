@@ -57,11 +57,13 @@ class LogicTv(LogicModuleBase):
             if sub == 'web_list':
                 ret = ModelTvMvItem.web_list(self.name, req)
             elif sub == 'create_shortcut':
-                entity_id = int(req.form['id'])
-                ret = LogicBase.create_shortcut(self.name, entity_id)
+                db_id = int(req.form['id'])
+                LogicBase.ShortcutJobQueue.put({'id':db_id, 'module_name':self.name})
+                ret = { 'ret':'success', 'msg':'바로가기 생성 요청 완료' }
             elif sub == 'remove_shortcut':
-                entity_id = int(req.form['id'])
-                ret = LogicBase.remove_shortcut(self.name, entity_id)
+                db_id = int(req.form['id'])
+                LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'shortcut'})
+                ret = { 'ret':'success', 'msg':'바로가기 삭제 요청 완료' }
             elif sub == 'metadata_search':
                 agent_type = req.form['meta_agent_type']
                 title = req.form['meta_search_word']
@@ -133,10 +135,15 @@ class LogicTv(LogicModuleBase):
 
             for entity in entities:
                 children = LibGdrive.get_children(entity.folder_id, time_after=entity.updated_time, service=service)
-                logger.debug(u'[tv_schedule] title:{}, 에피소트 추가 내역: {}'.format(entity.title, u'없음' if len(children) == 0 else '{} 건'.format(len(children))))
+                if children == None:
+                    logger.error('failed to get children files: skip!')
+                    continue
+
+                logger.debug(u'[tv_schedule] title:{}, 에피소드 추가 내역: {}'.format(entity.title, u'없음' if len(children) == 0 else '{} 건'.format(len(children))))
                 if len(children) > 0:
                     logger.debug('[tv_schedule] new episode found, send_scan(%s)', entity.title)
-                    LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'REFRESH', 'now':datetime.now()})
+                    fpath = os.path.join(entity.plex_path, children[0]['name'])
+                    LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':fpath, 'action':'REFRESH', 'now':datetime.now()})
 
             logger.debug('[tv_schedule] end tv scheduler')
 

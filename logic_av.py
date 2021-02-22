@@ -54,10 +54,12 @@ class LogicAv(LogicModuleBase):
                 ret = ModelAvItem.web_list(req)
             elif sub == 'create_shortcut':
                 db_id = int(req.form['id'])
-                ret = LogicBase.create_shortcut(self.name, db_id)
+                LogicBase.ShortcutJobQueue.put({'id':db_id, 'module_name':self.name})
+                ret = { 'ret':'success', 'msg':'바로가기 생성 요청 완료' }
             elif sub == 'remove_shortcut':
                 db_id = int(req.form['id'])
-                ret = LogicBase.remove_shortcut(self.name, db_id)
+                LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'shortcut'})
+                ret = { 'ret':'success', 'msg':'바로가기 삭제 요청 완료' }
             elif sub == 'metadata_search':
                 agent_type = req.form['meta_agent_type']
                 title = req.form['meta_search_word']

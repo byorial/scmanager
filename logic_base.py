@@ -51,7 +51,6 @@ class LogicBase(LogicModuleBase):
         'scmbase_auto_start' : u'False',
         'scmbase_interval'   : u'30',
         'gdrive_thread_num' : u'5',
-        'gdrive_plex_path_rule' : u'/Video/plex|/mnt/plex',
         'gdrive_local_path_rule': u'/Video/plex|/mnt/plex',
         'avlist_show_poster': u'True',
         'use_trash': u'False',
@@ -59,20 +58,21 @@ class LogicBase(LogicModuleBase):
 
         # plex
         'plex_remove_library': u'True',
-        'plex_scan_delay': u'30',
-        'plex_scan_min_limit': u'10',
+        'gdrive_plex_path_rule' : u'/Video/plex|/mnt/plex',
+        #'plex_scan_delay': u'30',
+        #'plex_scan_min_limit': u'10',
 
         # for ktv
         'tv_auto_start': u'False',
         'tv_scheduler': u'False',
         'tv_interval': u'30',
         'ktv_meta_result_limit_per_site': u'3',
-        'ktv_use_season_folder': u'True',
+        #'ktv_use_season_folder': u'True',
         'ktv_shortcut_name_rule': '{title} ({year})',
 
         # for ftv
         'ftv_meta_result_limit_per_site': u'3',
-        'ftv_use_season_folder': u'True',
+        #'ftv_use_season_folder': u'True',
         'ftv_shortcut_name_rule': u'{title} ({year})',
 
         # for movie
@@ -192,16 +192,6 @@ class LogicBase(LogicModuleBase):
             P.logger.error(traceback.format_exc())
             return jsonify({'ret':'exception', 'msg':str(e)})
 
-    """
-    @property
-    def ShortcutJobQueue(self):
-        return self.ShortcutJobQueue
-
-    @property
-    def PlexScannerQueue(self):
-        return self.PlexScannerQueue
-    """
-
 
     def scheduler_function(self):
         logger.debug('scheduler function!!!!!!!!!!!!!!')
@@ -272,10 +262,9 @@ class LogicBase(LogicModuleBase):
 
     @staticmethod
     def task():
-        global ShortcutJobQueue
         try:
-            ret = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'))
-            if ret == False:
+            service = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'), return_service=True)
+            if service == None:
                 data = {'type':'warning', 'msg':u'서비스계정 인증에 실패하여 스케쥴러를 실행할 수 없습니다.'}
                 socketio.emit("notify", data, namespace='/framework', broadcate=True)
                 logger.error('[schedule]: failed to authorize sa accounts(%s)', ModelSetting.get('gdrive_auth_path'))
@@ -287,28 +276,28 @@ class LogicBase(LogicModuleBase):
                 count = 0
                 rcount = 0
                 if (rule.reserved == u'' or rule.reserved == None) and rule.max_depth > 1:
-                    target_list = LibGdrive.get_target_subfolders(rule.root_folder_id, target_depth=rule.max_depth-1)
+                    target_list = LibGdrive.get_target_subfolders(rule.root_folder_id, target_depth=rule.max_depth-1, service=service)
                     rule.reserved = json.dumps(target_list)
                     rule.save()
 
                 # 최초 실행인 경우
                 if rule.last_searched_time == None:
-                    children = LibGdrive.get_all_subfolders(rule.root_folder_id, name=rule.name, max_depth=rule.max_depth, full_path=True)
+                    children = LibGdrive.get_all_subfolders(rule.root_folder_id, name=rule.name, max_depth=rule.max_depth, full_path=True, service=service)
                 else:
                     children = []
                     if rule.max_depth > 1:
                         target_list = json.loads(rule.reserved)
                         #logger.debug(json.dumps(target_list, indent=2))
                         for folder in target_list['target_folders']:
-                            tmp_children = LibGdrive.get_children_folders(folder['folder_id'], time_after=rule.last_searched_time)
+                            tmp_children = LibGdrive.get_children_folders(folder['folder_id'], time_after=rule.last_searched_time, service=service)
                             children = children + tmp_children
                     else:
-                        tmp_children = LibGdrive.get_children_folders(rule.root_folder_id, time_after=rule.last_searched_time)
+                        tmp_children = LibGdrive.get_children_folders(rule.root_folder_id, time_after=rule.last_searched_time, service=service)
                         children = children + tmp_children
 
                 rule.last_searched_time = datetime.now()
                 rule.save()
-                logger.debug('[schedule] %s: %d 개의 항목이 조회됨', rule.name, len(children))
+                logger.debug('[schedule] %s: %d 개의 새로운 항목이 조회됨', rule.name, len(children))
                 for child in children:
                     name = child['name']
                     folder_id = child['folder_id'] if 'folder_id' in child else child['id']
@@ -321,6 +310,8 @@ class LogicBase(LogicModuleBase):
                     if entity != None:
                         logger.debug(u'[schedule] SKIP: 이미 존재하는 아이템: %s', name)
                         rcount += 1
+                        if rule.use_auto_create_shortcut and entity.shortcut_created == False and entity.excluded == False:
+                            LogicBase.ShortcutJobQueue.put({'id':entity.id, 'agent_type':entity.agent_type})
                         continue
 
                     if rule.agent_type == 'ktv':
@@ -357,7 +348,7 @@ class LogicBase(LogicModuleBase):
                     info['mime_type'] = mime_type
                     info['folder_id'] = folder_id
                     info['parent_folder_id'] = parent_folder_id
-                    gdrive_path = LibGdrive.get_gdrive_full_path(folder_id)
+                    gdrive_path = LibGdrive.get_gdrive_full_path(folder_id, service=service)
                     info['orig_gdrive_path'] = gdrive_path
                     if ui_code != None: info['ui_code'] = ui_code
                     if rule.agent_type.startswith('av'):
@@ -428,7 +419,7 @@ class LogicBase(LogicModuleBase):
                     if entity != None:
                         logger.debug(u'(%d) SKIP: 이미 존재하는 아이템: %s', thread_id, name)
                         rcount += 1
-                        if rule.use_auto_create_shortcut and entity.shortcut_created == False:
+                        if rule.use_auto_create_shortcut and entity.shortcut_created == False and entity.excluded == False:
                             LogicBase.ShortcutJobQueue.put({'id':entity.id, 'agent_type':entity.agent_type})
                         continue
 
@@ -507,12 +498,8 @@ class LogicBase(LogicModuleBase):
             try:
                 server = PlexModelSetting.get('server_url')
                 token = PlexModelSetting.get('server_token')
-                #TODO
-                scan_delay = ModelSetting.get_int('plex_scan_delay')
-                scan_min_limit = ModelSetting.get_int('plex_scan_min_limit')
 
                 req = LogicBase.PlexScannerQueue.get()
-                now = datetime.now()
                 logger.debug('plex_scanner_thread...job-started()')
 
                 item_id  = req['id']
@@ -528,17 +515,6 @@ class LogicBase(LogicModuleBase):
                     socketio.emit("notify", data, namespace='/framework', broadcate=True)
                     LogicBase.PlexScannerQueue.task_done()
                     continue
-
-                timediff = queued_time + timedelta(seconds=scan_delay) - now
-                delay = int(timediff.total_seconds())
-                if delay < 0: delay = 0
-                if delay < scan_min_limit and prev_section_id == section_id: 
-                    logger.debug('스캔명령 전송 스킵...(%d)s', delay)
-                    LogicBase.PlexScannerQueue.task_done()
-                    continue
-
-                logger.debug('스캔명령 전송 대기...(%d)s', delay)
-                time.sleep(delay)
 
                 logger.debug('스캔명령 전송: server(%s), token(%s), section_id(%s)', server, token, section_id)
                 scan_path = py_urllib.quote(plex_path.encode('utf-8'))
@@ -705,8 +681,7 @@ class LogicBase(LogicModuleBase):
                 req = LogicBase.ShortcutJobQueue.get()
                 logger.debug('shortcut_create_thread_function...job-started()')
                 db_id  = req['id']
-                agent_type  = req['agent_type']
-                module_name = _map[agent_type]
+                module_name = req['module_name'] if 'module_name' in req else _map[req['agent_type']]
                 LogicBase.create_shortcut(module_name, db_id)
                 LogicBase.ShortcutJobQueue.task_done()
                 logger.debug('shortcut_create_thread_function...job-end()')
@@ -727,9 +702,8 @@ class LogicBase(LogicModuleBase):
                 logger.debug('remove_handler_thread_function...job-started()')
 
                 item_id  = req['id']
-                agent_type  = req['agent_type']
                 target  = req['target']
-                module_name = _map[agent_type]
+                module_name = req['module_name'] if 'module_name' in req else _map[req['agent_type']]
 
                 if target == 'shortcut':
                     ret = LogicBase.remove_shortcut(module_name, item_id)

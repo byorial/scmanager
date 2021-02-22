@@ -57,11 +57,13 @@ class LogicMv(LogicModuleBase):
             if sub == 'web_list':
                 ret = ModelTvMvItem.web_list('movie', req)
             elif sub == 'create_shortcut':
-                entity_id = int(req.form['id'])
-                ret = LogicBase.create_shortcut(self.name, entity_id)
+                db_id = int(req.form['id'])
+                LogicBase.ShortcutJobQueue.put({'id':db_id, 'module_name':self.name})
+                ret = { 'ret':'success', 'msg':'바로가기 생성 요청 완료' }
             elif sub == 'remove_shortcut':
-                entity_id = int(req.form['id'])
-                ret = LogicBase.remove_shortcut(self.name, entity_id)
+                db_id = int(req.form['id'])
+                LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'shortcut'})
+                ret = { 'ret':'success', 'msg':'바로가기 삭제 요청 완료' }
             elif sub == 'metadata_search':
                 agent_type = req.form['meta_agent_type']
                 title = req.form['meta_search_word']

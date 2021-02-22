@@ -239,12 +239,18 @@ function make_list(data) {
     } else {
       tmp += 'Plex: Off<br>';
     }
-    tmp += '아이템수: '+data[i].item_count + ' 건<br>';
+    tmp += '아이템: '+data[i].item_count + ' 건<br>';
     if (data[i].shortcut_count) {
       tmp += '바로가기: '+data[i].shortcut_count + ' 건<br>';
     } else { 
       tmp += '바로가기: 0 건<br>';
     } 
+    if (data[i].use_auto_create_shortcut == true) {
+      tmp += '자동생성: On';
+    } else { 
+      tmp += '자동생성: Off';
+    } 
+
     str += m_col(2, tmp);
     btn_str = m_button_tt('rule_modify_modal_btn', '규칙수정', [{'key':'idx', 'value':i }], 'success', tooltip='경로규칙을 수정합니다.', pos='up-left');
     btn_str += m_button_tt('rule_update_count_btn', '건수확인', [{'key':'id', 'value':data[i].id}], "success", tooltip='대상규칙의 아이템/바로가기 건수를 DB기준으로 동기화합니다.', pos='up');

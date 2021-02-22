@@ -237,23 +237,27 @@ class ScmUtil(LogicModuleBase):
     @staticmethod
     def get_shortcut_name(entity):
         try:
-            #TODO:
             rule_map = {
-                    'ktv'  : ['year' ,'genre','status'],
-                    'ftv'  : ['year' ,'genre','status'],
-                    'movie': ['year' ,'genre','country'],
-                    'avdvd': ['ui_code' ,'year' ,'genre','studio'],
-                    'avama': ['ui_code' ,'year' ,'genre','studio'],
+                    'ktv'  : ['year','genre','studio'],
+                    'ftv'  : ['year','genre','studio'],
+                    'movie': ['year','genre','country'],
+                    'avdvd': ['ui_code','actor','year','title', 'studio'],
+                    'avama': ['ui_code','actor','year','title', 'studio'],
                     }
 
             key = '{}_shortcut_name_rule'.format(entity.agent_type)
             title = ScmUtil.change_text_for_use_filename(entity.title)
             name = ModelSetting.get(key)
             name = name.replace('{title}', title)
+            name = name.replace('{orig}', entity.name)
             dict_entity = entity.as_dict()
             for keyword in rule_map[entity.agent_type]:
                 if name.find('{'+keyword+'}') != -1:
-                    name = name.replace('{'+keyword+'}', py_unicode(str(dict_entity[keyword])))
+                    if keyword == 'actor' and entity.agent_type.startswith('av'):
+                        actor = entity.actor.split('|')[0]
+                        name = name.replace('{'+keyword+'}', py_unicode(actor))
+                    else:
+                        name = name.replace('{'+keyword+'}', py_unicode(str(dict_entity[keyword])))
 
             return name
 
