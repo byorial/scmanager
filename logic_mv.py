@@ -32,8 +32,6 @@ ModelSetting = P.ModelSetting
 #########################################################
 
 class LogicMv(LogicModuleBase):
-    db_default = {'db_version': '1',}
-
     def __init__(self, P):
         super(LogicMv, self).__init__(P, 'itemlist')
         self.name = 'mv'

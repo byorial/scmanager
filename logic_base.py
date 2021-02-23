@@ -216,7 +216,7 @@ class LogicBase(LogicModuleBase):
                 return
 
             creds_dir = os.path.dirname(ModelSetting.get('gdrive_creds_path'))
-            if not os.path.isdir(creds_dir): os.mkdirs(creds_dir)
+            if not os.path.isdir(creds_dir): os.makedirs(creds_dir)
 
             ret = LibGdrive.sa_authorize(json_path)
             if ret == True: ModelSetting.set('gdrive_sa_auth', 'True')

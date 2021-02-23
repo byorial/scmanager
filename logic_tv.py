@@ -32,8 +32,6 @@ ModelSetting = P.ModelSetting
 #########################################################
 
 class LogicTv(LogicModuleBase):
-    db_default = {'db_version': '1',}
-
     def __init__(self, P):
         super(LogicTv, self).__init__(P, 'itemlist')
         self.name = 'tv'

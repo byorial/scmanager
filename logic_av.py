@@ -31,8 +31,6 @@ ModelSetting = P.ModelSetting
 #########################################################
 
 class LogicAv(LogicModuleBase):
-    db_default = {'db_version': '1',}
-
     def __init__(self, P):
         super(LogicAv, self).__init__(P, 'itemlist')
         self.name = 'av'
