@@ -103,9 +103,11 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
-    def create_tvmv_entity(info):
+    def update_tvmv_entity(info):
         try:
-            entity = ModelTvMvItem(info['name'], info['folder_id'], info['rule_name'], info['rule_id'])
+            #entity = ModelTvMvItem(info['name'], info['folder_id'], info['rule_name'], info['rule_id'])
+            entity = None
+            entity = ModelTvMvItem.get_by_folder_id(info['folder_id'])
             if entity == None: return None
             entity.rule_name = py_unicode(info['rule_name'])
             entity.agent_type = py_unicode(info['agent_type'])
@@ -131,11 +133,12 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
-    def create_av_entity(info):
+    def update_av_entity(info):
         try:
-            entity = ModelAvItem(info['ui_code'], info['folder_id'])
+            #entity = ModelAvItem(info['ui_code'], info['folder_id'])
+            entity = None
+            entity = ModelAvItem.get_by_folder_id(info['folder_id'])
             if entity == None: return None
-
             entity.rule_name = py_unicode(info['rule_name'])
             entity.rule_id = info['rule_id']
             entity.agent_type = py_unicode(info['agent_type'])
@@ -278,7 +281,7 @@ class ScmUtil(LogicModuleBase):
 
             info = ScmUtil.info_metadata(entity.agent_type, code, title)
             if info == None:
-                logger.error(u'메타정보 조회실패: %s:%s', rule.agent_type, title)
+                logger.error(u'메타정보 조회실패: %s:%s', entity.agent_type, title)
                 return { 'ret':'error', 'msg':'"{}"의 메타정보 조회실패.'.format(title) }
 
             entity.code = py_unicode(info['code'])
@@ -570,9 +573,9 @@ class ScmUtil(LogicModuleBase):
                 'avdvd':['dmm', 'javbus'],
                 'avama':['mgstage', 'jav321', 'r18']}
 
-        logger.debug('agent_type: %s, title:%s', agent_type, title)
         #TV
         title, year = ScmUtil.get_title_year_from_dname(title)
+        logger.debug('agent_type: %s, title:%s', agent_type, title)
         if agent_type == 'ktv':
             metadata = agent_map[agent_type].search(title, manual=True)
         elif agent_type == 'movie':
@@ -726,7 +729,7 @@ class ScmUtil(LogicModuleBase):
 
                 # OTT SHOW
                 metadata = LogicOttShow(LogicOttShow).info(code)
-                logger.debug(json.dumps(metadata, indent=2))
+                #logger.debug(json.dumps(metadata, indent=2))
                 # TODO:
                 """
                 prefix = ScmUtil.get_additional_prefix_by_code(agent_type, code)
@@ -739,6 +742,9 @@ class ScmUtil(LogicModuleBase):
             metadata = agent_map[agent_type].info(code)
 
 
+        if metadata == None:
+            logger.error('failed to info metadata(%s:%s)', code, title)
+            return None
         #debug
         #logger.debug(json.dumps(metadata, indent=2))
         info = {}
@@ -774,7 +780,7 @@ class ScmUtil(LogicModuleBase):
         info['studio'] = metadata['studio']
         info['year'] = metadata['year'] if 'year' in metadata else 1900
         if 'genre' in metadata and len(metadata['genre']) > 0:
-            logger.debug(metadata['genre'])
+            #logger.debug(metadata['genre'])
             info['genre'] = re.sub('[/]','&', metadata['genre'][0])
         else: info['genre'] = u''
         if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
@@ -883,6 +889,8 @@ class ScmUtil(LogicModuleBase):
 
             #title = re.sub('(\[(\w+|.+)\])', '', name)
             title = re.sub('(\[(\w+|.+)\])|\(\d{4}\)','',name)
+            ################################################
+            title = re.sub('[\\/:*?\"<>|\[\]]', '', title)
             return title.strip(), year
             
         except Exception as e:
