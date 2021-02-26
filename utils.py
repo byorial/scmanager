@@ -103,11 +103,11 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
-    def update_tvmv_entity(info):
+    def create_tvmv_entity(info):
         try:
-            #entity = ModelTvMvItem(info['name'], info['folder_id'], info['rule_name'], info['rule_id'])
             entity = None
-            entity = ModelTvMvItem.get_by_folder_id(info['folder_id'])
+            entity = ModelTvMvItem(info['name'], info['folder_id'], info['rule_name'], info['rule_id'])
+            #entity = ModelTvMvItem.get_by_folder_id(info['folder_id'])
             if entity == None: return None
             entity.rule_name = py_unicode(info['rule_name'])
             entity.agent_type = py_unicode(info['agent_type'])
@@ -133,11 +133,11 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
-    def update_av_entity(info):
+    def create_av_entity(info):
         try:
-            #entity = ModelAvItem(info['ui_code'], info['folder_id'])
             entity = None
-            entity = ModelAvItem.get_by_folder_id(info['folder_id'])
+            entity = ModelAvItem(info['ui_code'], info['folder_id'])
+            #entity = ModelAvItem.get_by_folder_id(info['folder_id'])
             if entity == None: return None
             entity.rule_name = py_unicode(info['rule_name'])
             entity.rule_id = info['rule_id']
@@ -494,33 +494,20 @@ class ScmUtil(LogicModuleBase):
     @staticmethod
     def get_ftv_meta_list(metadata):
         meta_list = []
-        for site in metadata:
-            if site == 'daum': 
-                m = metadata[site]
-                info = {}
-                info['site'] = site
-                info['code'] = m['code']
-                info['title'] = m['title']
-                info['genre'] = m['genre']
-                info['studio'] = m['studio']
-                info['score'] = m['score']
-                info['poster_url'] = m['image_url']
-                meta_list.append(info)
-            else:
-                count = 0
-                for m in metadata[site]:
-                    if ModelSetting.get_int('ftv_meta_result_limit_per_site') == count: break
-                    info = {}
-                    info['site'] = site
-                    info['code'] = m['code']
-                    info['title'] = m['title']
-                    info['genre'] = m['genre']
-                    info['studio'] = m['studio']
-                    info['score'] = m['score']
-                    info['poster_url'] = m['image_url']
-                    count += 1
-                    meta_list.append(info)
-
+        sites = {}
+        for m in metadata:
+            if m['site'] in sites: sites[m['site']] = sites[m['site']] + 1
+            else: sites[m['site']] = 1
+            if ModelSetting.get_int('ftv_meta_result_limit_per_site') > sites[m['site']]: break
+            info = {}
+            info['site'] = site
+            info['code'] = m['code']
+            info['title'] = m['title']
+            info['genre'] = m['genre']
+            info['studio'] = m['studio']
+            info['score'] = m['score']
+            info['poster_url'] = m['image_url']
+            meta_list.append(info)
         return meta_list
 
     @staticmethod
@@ -568,7 +555,7 @@ class ScmUtil(LogicModuleBase):
                 'avdvd':LogicJavCensored(LogicJavCensored), 'avama':LogicJavCensoredAma(LogicJavCensoredAma)}
 
         site_map = {'ktv':['daum','tving','wavve'],
-                'ftv':['daum', 'tvdb', 'tmdb', 'watcha', 'tmdb'],
+                'ftv':['daum', 'tvdb', 'tmdb', 'watcha'],
                 'movie':['naver', 'daum', 'tmdb', 'watcha', 'wavve', 'tving'],
                 'avdvd':['dmm', 'javbus'],
                 'avama':['mgstage', 'jav321', 'r18']}
@@ -580,6 +567,9 @@ class ScmUtil(LogicModuleBase):
             metadata = agent_map[agent_type].search(title, manual=True)
         elif agent_type == 'movie':
             metadata = agent_map[agent_type].search(title, year, manual=True)
+        elif agent_type == 'ftv':
+            metadata = agent_map[agent_type].search(title, year, manual=True)
+            #logger.debug(json.dumps(metadata, indent=2))
         elif agent_type == 'avdvd' or agent_type == 'avama':
             metadata = agent_map[agent_type].search(title, all_find=True, do_trans=True)
             #logger.debug(json.dumps(metadata, indent=2))
@@ -589,11 +579,12 @@ class ScmUtil(LogicModuleBase):
             elif agent_type == 'ftv': meta_list = ScmUtil.get_ftv_meta_list(metadata)
             elif agent_type == 'movie': meta_list = ScmUtil.get_movie_meta_list(metadata)
             else: meta_list = ScmUtil.get_av_meta_list(metadata)
+            meta_list = sorted(meta_list, key=lambda x:x['score'], reverse=True)
             return {'ret':'success', 'data':meta_list}
 
         info = {}
         for site in site_map[agent_type]:
-            if agent_type.endswith('tv'):
+            if agent_type == 'ktv':
                 if site in metadata:
                     if site != 'daum': r = metadata[site][0]
                     else: r = metadata[site]
@@ -607,6 +598,19 @@ class ScmUtil(LogicModuleBase):
                     info['year'] = r['year'] if 'year' in r else 1900
                     info['genre'] = r['genre'] if 'genre' in r else ''
                     break
+            else:
+                for r in metadata:
+                    if agent_type.startswith('av'): info['ui_code'] = r['ui_code']
+                    info['code'] = r['code']
+                    info['status'] = 2
+                    info['title'] = r['title']
+                    info['site'] = r['site']
+                    info['poster_url'] = r['image_url']
+                    info['studio'] = u''
+                    info['year'] = r['year']
+                    info['genre'] = r['genre'] if 'genre' in r else ''
+                    break
+            """
             elif agent_type == 'movie':
                 for r in metadata:
                     info['code'] = r['code']
@@ -630,6 +634,7 @@ class ScmUtil(LogicModuleBase):
                     info['year'] = r['year']
                     info['genre'] = r['genre'] if 'genre' in r else ''
                     break
+            """
 
         return info
     
@@ -741,12 +746,13 @@ class ScmUtil(LogicModuleBase):
         else:
             metadata = agent_map[agent_type].info(code)
 
-
         if metadata == None:
             logger.error('failed to info metadata(%s:%s)', code, title)
             return None
         #debug
-        #logger.debug(json.dumps(metadata, indent=2))
+        #if agent_type == 'ftv':
+            #logger.debug(json.dumps(metadata, indent=2))
+
         info = {}
         thumb = None
         if agent_type.startswith('av'):
@@ -760,7 +766,7 @@ class ScmUtil(LogicModuleBase):
                         break
                 if thumb == None:
                     thumb = thumbs[0]
-        elif agent_type == 'movie':
+        elif agent_type == 'movie' or agent_type == 'ftv':
             if 'art' not in metadata: thumb = {'thumb':'', 'value':''}
             else:
                 for art in metadata['art']:
@@ -773,7 +779,8 @@ class ScmUtil(LogicModuleBase):
 
 
         info['code'] = metadata['code']
-        info['status'] = metadata['status'] if 'status' in metadata else 2
+        if agent_type == 'ftv': info['status'] = 1 if metadata['status'] == 'Continuing' else 2
+        else: info['status'] = metadata['status'] if 'status' in metadata else 2
         info['title'] = metadata['title']
         info['site'] = metadata['site']
         info['poster_url'] = thumb['value'] if thumb['thumb'] == "" else thumb['thumb']
@@ -783,8 +790,10 @@ class ScmUtil(LogicModuleBase):
             #logger.debug(metadata['genre'])
             info['genre'] = re.sub('[/]','&', metadata['genre'][0])
         else: info['genre'] = u''
-        if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
-        else: info['country'] = u'한국' if agent_type == 'ktv' else u''
+        if agent_type == 'ftv': info['country'] = u''
+        else:
+            if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
+            else: info['country'] = u'한국' if agent_type == 'ktv' else u''
         return info
     
     @staticmethod

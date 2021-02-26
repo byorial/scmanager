@@ -341,7 +341,7 @@ class LogicBase(LogicModuleBase):
 
                     info = ScmUtil.info_metadata(rule.agent_type, r['code'], r['title'])
                     if info == None:
-                        info = ScmUtil.info_metadata(rule.agent_tyupe, r['code'], name)
+                        info = ScmUtil.info_metadata(rule.agent_type, r['code'], name)
                         if info == None:
                             logger.debug(u'메타정보 조회실패: %s:%s', rule.agent_type, name)
                             continue
@@ -362,8 +362,8 @@ class LogicBase(LogicModuleBase):
                     gdrive_path = LibGdrive.get_gdrive_full_path(folder_id, service=service)
                     info['orig_gdrive_path'] = gdrive_path
                     if ui_code != None: info['ui_code'] = ui_code
-                    if rule.agent_type.startswith('av'): entity = ScmUtil.update_av_entity(info)
-                    else: entity = ScmUtil.update_tvmv_entity(info)
+                    if rule.agent_type.startswith('av'): entity = ScmUtil.create_av_entity(info)
+                    else: entity = ScmUtil.create_tvmv_entity(info)
                     count += 1
 
                     if rule.use_auto_create_shortcut:
@@ -460,9 +460,9 @@ class LogicBase(LogicModuleBase):
                     if 'ui_code' in r: ui_code = r['ui_code']
                     #logger.debug('ui_code: %s', ui_code)
 
-                    if rule.agent_type.startswith('av'): entity  = ModelAvItem(ui_code, folder_id)
-                    else: entity  = ModelTvMvItem(name, folder_id, rule.name, rule.id)
-                    if entity != None: entity.save()
+                    #if rule.agent_type.startswith('av'): entity  = ModelAvItem(ui_code, folder_id)
+                    #else: entity  = ModelTvMvItem(name, folder_id, rule.name, rule.id)
+                    #if entity != None: entity.save()
 
                     info = ScmUtil.info_metadata(rule.agent_type, r['code'], r['title'])
                     if info == None:
@@ -485,8 +485,8 @@ class LogicBase(LogicModuleBase):
                     info['parent_folder_id'] = parent_folder_id
                     info['orig_gdrive_path'] = gdrive_path
                     if ui_code != None: info['ui_code'] = ui_code
-                    if rule.agent_type.startswith('av'): entity = ScmUtil.update_av_entity(info)
-                    else: entity = ScmUtil.update_tvmv_entity(info)
+                    if rule.agent_type.startswith('av'): entity = ScmUtil.create_av_entity(info)
+                    else: entity = ScmUtil.create_tvmv_entity(info)
                     count += 1
 
                     if rule.use_auto_create_shortcut and entity.shortcut_created == False:

@@ -70,6 +70,11 @@ class LogicTv(LogicModuleBase):
                 ret = ScmUtil.apply_meta(self.name, req)
             elif sub == 'refresh_info':
                 ret = ScmUtil.refresh_info(self.name, req)
+            elif sub == 'remove_item':
+                db_id = int(req.form['id'])
+                entity = ModelTvMvItem.get_by_id(db_id)
+                entity.delete(entity.id)
+                ret = { 'ret':'success', 'msg':'아이템 항목 삭제  완료' }
             elif sub == 'get_children':
                 db_id = int(req.form['id'])
                 ret = ScmUtil.get_children(self.name, db_id)

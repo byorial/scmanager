@@ -69,6 +69,11 @@ class LogicAv(LogicModuleBase):
             elif sub == 'get_children':
                 db_id = int(req.form['id'])
                 ret = ScmUtil.get_children(self.name, db_id)
+            elif sub == 'remove_item':
+                db_id = int(req.form['id'])
+                entity = ModelAvItem.get_by_id(db_id)
+                entity.delete(entity.id)
+                ret = { 'ret':'success', 'msg':'아이템 항목 삭제  완료' }
             elif sub == 'change_excluded':
                 db_id = int(req.form['id'])
                 action = req.form['action']

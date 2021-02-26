@@ -149,7 +149,9 @@ function make_list(data) {
     tmp = m_button_tt('global_json_btn', 'J', [{'key':'id', 'value':data[i].id}], 'success', '상세정보 확인(JSON)', 'down-left', 'small');
     tmp += m_button_tt('get_children_btn', 'F', [{'key':'id', 'value':data[i].id}], 'success', '하위경로파일정보확인', 'down-left', 'small');
     if (data[i].shortcut_created == false) {
-      tmp += m_button_tt('shortcut_create_btn', 'P', [{'key':'id', 'value':data[i].id}], 'info', '해당프로그램을 Plex에 추가합니다', 'down', 'small');
+      if (data[i].excluded == false) {
+        tmp += m_button_tt('shortcut_create_btn', 'P', [{'key':'id', 'value':data[i].id}], 'info', '해당프로그램을 Plex에 추가합니다', 'down', 'small');
+      }
       tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보를 조회하고 갱신합니다', 'down-right', 'small');
     } else {
       tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타조회 및 갱신', 'down', 'small');
@@ -158,6 +160,7 @@ function make_list(data) {
     if (data[i].excluded == false) {
       tmp += m_button_tt('add_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에서 제외하기', 'down-right', 'small');
     } else {
+      tmp += m_button_tt('item_remove_btn', 'D', [{'key':'id', 'value':data[i].id}], 'danger', '아이템을 목록에서 삭제', 'down', 'small');
       tmp += m_button_tt('del_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에 추가하기', 'down-right', 'small');
     }
     btn_str = m_button_group(tmp);
@@ -172,22 +175,10 @@ function make_list(data) {
   document.getElementById("list_div").innerHTML = str;
 }
 
-$("body").on('click', '#strm_all_plex_btn', function(e){
+$("body").on('click', '#item_remove_btn', function(e){
   e.preventDefault();
-  type = 'plex';
-  create_strm_batch(type);
-});
-
-$("body").on('click', '#strm_all_kodi_btn', function(e){
-  e.preventDefault();
-  type = 'kodi';
-  create_strm_batch(type);
-});
-
-$("body").on('click', '#strm_all_btn', function(e){
-  e.preventDefault();
-  type = 'all';
-  create_strm_batch(type);
+  id = $(this).data('id');
+  item_remove(id);
 });
 
 $("body").on('click', '#shortcut_remove_btn', function(e){
@@ -220,6 +211,24 @@ $("body").on('click', '#add_excluded_btn, #del_excluded_btn', function(e){
   id = $(this).data('id');
   change_excluded(id, action);
 });
+
+function item_remove(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/remove_item',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+    }
+  });
+}
 
 function change_excluded(id, action) {
   $.ajax({
@@ -467,8 +476,12 @@ function refresh_info(id) {
 function set_referrer() {
   delete window.document.referrer;
   window.document.__defineGetter__('referrer', function () {
-    return "www.daum.net";
+    return "no-referrer";
   });
+//var meta = document.createElement('meta');
+//meta.name = "referrer";
+//meta.content = "no-referrer";
+//document.getElementsByTagName('head')[0].appendChild(meta);
 }
 
 function set_category_options() {
