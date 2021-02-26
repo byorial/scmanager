@@ -92,10 +92,10 @@ class P(object):
     plugin_info = {
         'version' : '0.1.0.0',
         'name' : package_name,
-        'category_name' : 'fileprocess',
+        'category_name' : 'service',
         'icon' : '',
         'developer' : u'orial',
-        'description' : u'Library manager using GDrive shotcut',
+        'description' : u'Gdrive shorcut manager for SJVA Plugin',
         'home' : 'https://github.com/byorial/%s' % package_name,
         'more' : '',
     }
