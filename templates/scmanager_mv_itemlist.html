@@ -21,11 +21,11 @@
               <option value="excluded">제외목록</option>
             </select>
          </span>
-         <span class="col-md-4">
+         <span class="col-md-3">
 	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
 	 </span>
-         <span class="col-md-2">
-          {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋']]) }}
+         <span class="col-md-3">
+          {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋'], ['request_modal_btn', '요청']]) }}
          </span>
         </span>
        </div>
@@ -86,6 +86,9 @@
   </div>
 {{ macros.m_modal_end() }}
 
+{{ macros.m_modal_start('request_msg_modal', '자료요청하기', 'modal-lg') }}
+{{ macros.setting_input_text_and_buttons('request_msg', '자료요청', [['request_msg_btn', '전송']],value='', placeholder='작품명 or 메시지(누락에피소드 등)', desc=['자료요청, 누락에피스드 요청', '작품 명이나 내용 입력후 전송', 'ID: scmanager_request']) }}
+{{ macros.m_modal_end() }}
 
 <script type="text/javascript">
 var package_name = "{{arg['package_name']}}";
@@ -493,6 +496,29 @@ function change_excluded(id, action) {
   });
 }
 
+$("#request_modal_btn").click(function(e) {
+  e.preventDefault();
+  $("#request_msg_modal").modal();
+});
+
+$("body").on('click', '#request_msg_btn', function(e) {
+  e.preventDefault();
+  msg = document.getElementById('request_msg').value
+  $.ajax({
+    url: '/' + package_name + '/ajax/' + sub + '/msg_request',
+    type: "POST", 
+    cache: false,
+    data:{msg:msg},
+    dataType: "json",
+    success: function (data) {
+      if (data.ret == 'success') {
+        $.notify('<strong>'+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>'+data.msg+'</strong>', {type: 'warning'});
+      }
+    }
+  });
+});
 
 function m_button_tt(id, text, data, outline_color, tooltip='', pos='down', size='medium') {
   var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '

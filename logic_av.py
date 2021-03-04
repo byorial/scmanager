@@ -78,6 +78,9 @@ class LogicAv(LogicModuleBase):
                 db_id = int(req.form['id'])
                 action = req.form['action']
                 ret = ScmUtil.change_excluded(self.name, db_id, action)
+            elif sub == 'msg_request':
+                msg = req.form['msg']
+                ret = ScmUtil.send_message('av', msg)
             return jsonify(ret)
 
         except Exception as e: 

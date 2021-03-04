@@ -16,6 +16,7 @@ from framework.util import Util
 from framework.common.util import headers, get_json_with_auth_session
 from framework.common.plugin import LogicModuleBase, default_route_socketio
 from tool_expand import ToolExpandFileProcess
+from tool_base import ToolBaseNotify
 
 # GDrive Lib
 from lib_gdrive import LibGdrive
@@ -942,4 +943,14 @@ class ScmUtil(LogicModuleBase):
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
             return {'ret':'error', 'msg':'제외목록 반영실패.'}
+
+    @staticmethod
+    def send_message(ctype, msg):
+        message_id = 'scmanager_request'
+        m = u'[자료요청]\n'
+        m += 'FROM: '+ SystemModelSetting.get('ddns') + '\n'
+        m += '유형: '+ ctype + '\n'
+        m += '내용: '+ msg
+        ToolBaseNotify.send_message(m, message_id=message_id)
+        return {'ret':'success', 'msg':'자료요청 전송 완료'}
 

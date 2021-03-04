@@ -90,7 +90,8 @@
     {{ macros.m_tab_content_end() }}
    {% endif %}
    {{ macros.m_tab_content_start('etc', false) }}
-   <!--{{ macros.setting_button([['refresh_all_rule_btn','경로규칙갱신'],['reset_all_rule_btn','경로규칙삭제']], left='경로규칙', desc='') }} -->
+    <!-- {{ macros.setting_input_text_and_buttons('request_msg', '자료요청', [['request_msg_btn', '전송']],value='', placeholder='작품명 or 메시지(누락에피소드 등)', desc=['자료요청, 누락에피스드 요청', '작품 명이나 내용 입력후 전송', 'ID: scmanager_request']) }}
+   {{ macros.setting_button([['refresh_all_rule_btn','경로규칙갱신'],['reset_all_rule_btn','경로규칙삭제']], left='경로규칙', desc='') }} -->
    {{ macros.m_tab_content_end() }}
   </form>
 </div> <!--전체-->
@@ -206,6 +207,27 @@ $('#tv_scheduler').change(function() {
     }
   });
 });
+
+$("body").on('click', '#request_msg_btn', function(e) {
+  e.preventDefault();
+  msg = document.getElementById('request_msg').value
+  $.ajax({
+    url: '/' + package_name + '/ajax/' + sub + '/msg_request',
+    type: "POST", 
+    cache: false,
+    data:{msg:msg},
+    dataType: "json",
+    success: function (data) {
+      if (data.ret == 'success') {
+        $.notify('<strong>'+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>'+data.msg+'</strong>', {type: 'warning'});
+      }
+    }
+  });
+});
+
+
 
 </script>    
 {% endblock %}

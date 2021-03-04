@@ -221,9 +221,9 @@ class LogicBase(LogicModuleBase):
             ret = LibGdrive.sa_authorize(json_path)
             if ret == True: ModelSetting.set('gdrive_sa_auth', 'True')
             else: ModelSetting.set('gdrive_sa_auth', 'False')
+            ret = LibGdrive.user_authorize(ModelSetting.get('gdrive_token_path'))
             if ret == True: ModelSetting.set('gdrive_user_auth', 'True')
             else: ModelSetting.set('gdrive_user_auth', 'False')
-            ret = LibGdrive.user_authorize(ModelSetting.get('gdrive_token_path'))
             LogicBase.Services = LibGdrive.sa_authorize_for_multiple_connection(ModelSetting.get('gdrive_auth_path'), ModelSetting.get_int('gdrive_thread_num'))
 
             if LogicBase.RuleJobQueue == None: LogicBase.RuleJobQueue = py_queue.Queue()
