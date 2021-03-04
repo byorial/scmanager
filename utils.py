@@ -308,7 +308,11 @@ class ScmUtil(LogicModuleBase):
             if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
             else: entity = ModelTvMvItem.get_by_id(db_id)
 
-            children = LibGdrive.get_children(entity.folder_id, ['id', 'name', 'mimeType', 'size'])
+            service = None
+            service = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'), return_service=True)
+            if service == None: return {'ret':'error', 'msg':u'서비스계정 인증 실패.'}
+
+            children = LibGdrive.get_children(entity.folder_id, ['id', 'name', 'mimeType', 'size'], service=service)
             if children == None:
                 return { 'ret':'error', 'msg':'"{}"의 정보조회 실패.'.format(entity.title) }
 
