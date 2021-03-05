@@ -6,8 +6,8 @@
   <form id="form_search" name="from_search" class="form-inline" style="text-align:left">
     <div class="container-fluid">
       <div class="row show-grid" align="center">
-        <span class="col-md-12" align="left">
-          <span class="col-md-4" style="align-items:left; text-align:left;">
+        <span class="col-md-12">
+          <span class="col-md-6" style="align-items:left; text-align:left;">
             <select name='category'>
               <option value="all">전체경로</option>
             </select>
@@ -23,8 +23,8 @@
               <option value="excluded">제외목록</option>
             </select>
          </span>
-         <span class="col-md-5">
-	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
+         <span class="col-md-3">
+	  <input id="search_word" name="search_word" class="form-control form-control-sm" type="text" placeholder="제목입력" aria-label="Search" style="width: 40%;">
 	 </span>
          <span class="col-md-3">
           {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋'], ['request_modal_btn', '요청']]) }}
