@@ -295,6 +295,10 @@ class ModelTvMvItem(db.Model):
         return db.session.query(cls).filter_by(status=1).all()
 
     @classmethod
+    def get_entities_by_rule_id(cls, rule_id):
+        return db.session.query(cls).filter_by(rule_id=rule_id).all()
+
+    @classmethod
     def get_item_count(cls, rule_id):
         return db.session.query(cls).filter_by(rule_id=rule_id).count()
 
@@ -521,6 +525,10 @@ class ModelAvItem(db.Model):
     @classmethod
     def get_all_entities(cls):
         return db.session.query(cls).all()
+
+    @classmethod
+    def get_entities_by_rule_id(cls, rule_id):
+        return db.session.query(cls).filter_by(rule_id=rule_id).all()
 
     @classmethod
     def get_item_count(cls, rule_id):

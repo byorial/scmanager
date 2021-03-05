@@ -67,21 +67,32 @@ class ScmUtil(LogicModuleBase):
     def modify_rule(req):
         try:
             id = int(req.form['id'])
-            entity = ModelRuleItem.get_by_id(id)
-            entity.name = py_urllib.unquote(req.form['curr_rule_name'])
-            entity.agent_type = py_urllib.unquote(req.form['curr_agent_type'])
-            entity.root_folder_id = py_urllib.unquote(req.form['curr_root_folder_id'])
-            entity.root_full_path = py_urllib.unquote(req.form['curr_root_full_path'])
-            entity.max_depth = req.form['curr_max_depth']
-            entity.target_folder_id = py_urllib.unquote(req.form['curr_target_folder_id'])
-            entity.target_full_path = py_urllib.unquote(req.form['curr_target_full_path'])
-            entity.use_subfolder = True if req.form['curr_use_subfolder'] == 'True' else False
-            entity.subfolder_rule = py_urllib.unquote(req.form['curr_subfolder_rule'])
-            entity.use_plex = True if req.form['curr_use_plex'] == 'True' else False
-            entity.use_schedule = True if req.form['curr_use_schedule'] == 'True' else False
-            entity.use_auto_create_shortcut = True if req.form['curr_use_auto_create_shortcut'] == 'True' else False
-            entity.save()
-            return {'ret':'success', 'msg':u'{n} 항목이 수정 되었습니다.'.format(n=entity.name)} 
+            rule = ModelRuleItem.get_by_id(id)
+            rule.name = py_urllib.unquote(req.form['curr_rule_name'])
+            rule.agent_type = py_urllib.unquote(req.form['curr_agent_type'])
+            rule.root_folder_id = py_urllib.unquote(req.form['curr_root_folder_id'])
+            rule.root_full_path = py_urllib.unquote(req.form['curr_root_full_path'])
+            rule.max_depth = req.form['curr_max_depth']
+            rule.target_folder_id = py_urllib.unquote(req.form['curr_target_folder_id'])
+            rule.target_full_path = py_urllib.unquote(req.form['curr_target_full_path'])
+            rule.use_subfolder = True if req.form['curr_use_subfolder'] == 'True' else False
+            rule.subfolder_rule = py_urllib.unquote(req.form['curr_subfolder_rule'])
+            rule.use_plex = True if req.form['curr_use_plex'] == 'True' else False
+            rule.use_schedule = True if req.form['curr_use_schedule'] == 'True' else False
+            rule.use_auto_create_shortcut = True if req.form['curr_use_auto_create_shortcut'] == 'True' else False
+            rule.save()
+
+            # rule 에 해당하는 item 들의 정보갱신
+            if rule.agent_type.startswith('av'): entities = ModelAvItem.get_entities_by_rule_id(rule.id)
+            else: entities = ModelTvMvItem.get_entities_by_rule_id(rule.id)
+
+            for e in entities:
+                e.rule_name = rule.name
+                e.root_folder_id = rule.root_folder_id
+                e.target_folder_id = rule.target_folder_id
+                e.save()
+
+            return {'ret':'success', 'msg':u'{n} 항목이 수정 되었습니다.'.format(n=rule.name)} 
         except Exception as e:
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
