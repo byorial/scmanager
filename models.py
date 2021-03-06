@@ -375,12 +375,16 @@ class ModelTvMvItem(db.Model):
                 for tt in tmp:
                     if tt != '':
                         conditions.append(cls.title.like('%'+tt.strip()+'%') )
+                        conditions.append(cls.name.like('%'+tt.strip()+'%') )
                 query = query.filter(or_(*conditions))
             elif search.find(',') != -1:
                 tmp = search.split(',')
+                conditions = []
                 for tt in tmp:
                     if tt != '':
-                        query = query.filter(cls.title.like('%'+tt.strip()+'%'))
+                        conditions.append(cls.title.like('%'+tt.strip()+'%') )
+                        conditions.append(cls.name.like('%'+tt.strip()+'%') )
+                        query = query.filter(or_(*conditions))
             else:
                 query = query.filter(or_(cls.title.like('%'+search+'%'), cls.name.like('%'+search+'%')))
 
