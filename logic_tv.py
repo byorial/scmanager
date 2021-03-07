@@ -154,7 +154,8 @@ class LogicTv(LogicModuleBase):
                     if entity.local_path != '' and os.path.isfile(ModelSetting.get('rclone_bin_path')):
                         from system.logic_command import SystemLogicCommand
                         # /usr/bin/rclone rc vfs/refresh recursive=true --rc-addr 127.0.0.1:5572 _async=true
-                        command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+entity.local_path, '_async=true']
+			rc_path = ScmUtil.get_rc_path(entity.local_path)
+                        command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
                         data = SystemLogicCommand.execute_command_return(command)
                         if data.find('Failed'):
                             data = {'type':'warning', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}

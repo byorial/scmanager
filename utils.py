@@ -879,6 +879,28 @@ class ScmUtil(LogicModuleBase):
             logger.error(traceback.format_exc())
 
     @staticmethod
+    def get_rc_path(local_path):
+        try:
+            ret = local_path
+            rules = ModelSetting.get('gdrive_local_path_rule')
+            if rules == u'' or rules.find('|') == -1:
+                return ret
+            if rules is not None:
+                rules = rules.split(',')
+                rules = sorted(rules, key=lambda x:len(x.split('|')[0]), reverse=True)
+                for rule in rules:
+                    tmp = rule.split('|')
+                    if local_path.startswith(tmp[1]):
+                        ret = local_path.replace(tmp[1], '')
+                        if ret[0] == '/': ret = ret[1:]
+                        return ret
+            return ret
+
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
     def get_files(target_path, target_ext_list=None, except_name_list=None):
         file_list = []
 
