@@ -879,10 +879,10 @@ class ScmUtil(LogicModuleBase):
             logger.error(traceback.format_exc())
 
     @staticmethod
-    def get_rc_path(local_path):
+    def get_rc_path(plex_path):
         try:
-            ret = local_path
-            rules = ModelSetting.get('gdrive_local_path_rule')
+            ret = plex_path
+            rules = ModelSetting.get('gdrive_plex_path_rule')
             if rules == u'' or rules.find('|') == -1:
                 return ret
             if rules is not None:
@@ -890,9 +890,10 @@ class ScmUtil(LogicModuleBase):
                 rules = sorted(rules, key=lambda x:len(x.split('|')[0]), reverse=True)
                 for rule in rules:
                     tmp = rule.split('|')
-                    if local_path.startswith(tmp[1]):
-                        ret = local_path.replace(tmp[1], '')
+                    if plex_path.startswith(tmp[1]):
+                        ret = plex_path.replace(tmp[1], '')
                         if ret[0] == '/': ret = ret[1:]
+                        elif ret[0] == '\\': ret = ret[1:]
                         return ret
             return ret
 

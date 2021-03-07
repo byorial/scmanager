@@ -59,6 +59,8 @@ class LogicBase(LogicModuleBase):
         # plex
         'plex_remove_library': u'True',
         'gdrive_plex_path_rule' : u'/Video/plex|/mnt/plex',
+        'rclone_bin_path': os.path.join(path_data, 'bin', 'Linux', 'rclone'),
+        'rclone_rc_addr':'127.0.0.1:5572',
         #'plex_scan_delay': u'30',
         #'plex_scan_min_limit': u'10',
 
@@ -69,8 +71,6 @@ class LogicBase(LogicModuleBase):
         'ktv_meta_result_limit_per_site': u'3',
         #'ktv_use_season_folder': u'True',
         'ktv_shortcut_name_rule': '{title} ({year})',
-        'rclone_bin_path': os.path.join(path_data, 'bin', 'Linux', 'rclone'),
-        'rclone_rc_addr':'127.0.0.1:5572',
 
         # for ftv
         'ftv_meta_result_limit_per_site': u'3',

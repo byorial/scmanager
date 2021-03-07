@@ -47,6 +47,8 @@
    {{ macros.m_tab_content_start('plex', false) }}
     {{ macros.setting_checkbox('plex_remove_library', '라이브러리 삭제', value=arg['plex_remove_library'], desc='On : 바로가기 삭제시 Plex라이브러리 에서도 해당 작품을 삭제함') }}
     {{ macros.setting_input_text('gdrive_plex_path_rule', 'PLEX 경로변환규칙', value=arg['gdrive_plex_path_rule'], desc=['SJVA에서 구글드라이브 경로와 Plex서버상의 경로가 다를경우 사용', '형식: GDrive상경로|Plex 상의 경로', '예: /Plex|P: (구글드라이브 /Plex가 Plex 서버에서 P:으로 매칭)']) }}
+    {{ macros.setting_input_text('rclone_bin_path', 'Rclone 경로', value=arg['rclone_bin_path'], desc=['로컬기준 Rclone 명령어 경로']) }}
+    {{ macros.setting_input_text('rclone_rc_addr', 'Rclone rc주소', value=arg['rclone_rc_addr'], desc=['PMS의 Rclone rc(remote control)주소, IP:PORT형태: 127.0.0.1:5572', 'PMS서버 기준의 rc주소, PMS에서 마운트시 rc지정 필요']) }}
     <!-- {{ macros.setting_input_int('plex_scan_delay', '스캔요청 지연시간', value=arg['plex_scan_delay'], desc='바로가기생성 후 스캔명령 전송 지연 시간(초단위)') }}
     {{ macros.setting_input_int('plex_scan_min_limit', '스캔재전송제한시간(초)', value=arg['plex_scan_min_limit'], desc=['동일섹션에 대해 스캔명령을 재 전송할 최소 제한 시간','10으로 설정시 10초 내에는 동일 섹션에 스캔명령을 전송하지 않음']) }} -->
    {{ macros.m_tab_content_end() }}
@@ -72,8 +74,6 @@
     {{ macros.setting_input_int('ktv_meta_result_limit_per_site', '메타조회결과제한값', value=arg['ktv_meta_result_limit_per_site'], desc='메타조회시 사이트별 표시할 최대 작품 갯수') }}
     <!-- {{ macros.setting_checkbox('ktv_use_season_folder', '시즌폴더 사용', value=arg['ktv_use_season_folder'], desc='On : 작품폴더 하위에 시즌폴더가 있는 경우 프로그램을 시즌별로 등록') }} -->
     {{ macros.setting_input_text('ktv_shortcut_name_rule', '바로가기 이름규칙', value=arg['ktv_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "제목 (년도)"', '지원: {orig},{title},{year},{genre},{studio}', '{orig}: 원본폴더명']) }}
-    {{ macros.setting_input_text('rclone_bin_path', 'Rclone 경로', value=arg['rclone_bin_path'], desc=['Rclone 명령어 경로','마운트시 rc옵션이 지정되어야함']) }}
-    {{ macros.setting_input_text('rclone_rc_addr', 'Rclone rc주소', value=arg['rclone_rc_addr'], desc=['Rclone rc(remote control)주소, IP:PORT형태: 127.0.0.1:5572']) }}
    {{ macros.m_tab_content_end() }}
    {{ macros.m_tab_content_start('ftv', false) }}
     {{ macros.setting_input_int('ftv_meta_result_limit_per_site', '메타조회결과제한값', value=arg['ftv_meta_result_limit_per_site'], desc='메타조회시 사이트별 표시할 최대 작품 갯수') }}
