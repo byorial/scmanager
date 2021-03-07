@@ -167,7 +167,7 @@ function make_list(data) {
     tt = text_truncate(data[i].title, 48);
     str += '<strong aria-label="'+data[i].title+'" data-balloon-pos="down" data-balloon-length="large">' + tt + '</strong> / ' + data[i].agent_type.toUpperCase() + '<br>';
     str += '<small class="text-muted">';
-    str += '원본폴더: '+data[i].name+'<br>';
+    str += '원본폴더: <a href="https://drive.google.com/drive/folders/'+data[i].folder_id+'" target="_blank">'+data[i].name+'</a><br>';
     str += '년도: '+data[i].year+ ' /사이트: '+data[i].site+'<br>';
     genre = text_truncate(data[i].genre, 14);
     str += '장르: '+genre+'<br>';

@@ -142,7 +142,7 @@ function make_list(data) {
     str += '<strong>' + data[i].title + '</strong> / ' + data[i].agent_type.toUpperCase() + '<br>';
     str += '<small class="text-muted">';
     str += '장르: '+data[i].genre+' / 국가: ' +data[i].country+ '<br>';
-    str += '원본폴더명: '+data[i].name+'<br>';
+    str += '원본폴더: <a href="https://drive.google.com/drive/folders/'+data[i].folder_id+'" target="_blank">'+data[i].name+'</a><br>';
     str += '년도: '+data[i].year+ ' /사이트: '+data[i].site+'<br>';
     str += '</small>';
     str += '</p>';
