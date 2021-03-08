@@ -187,6 +187,9 @@ class LogicBase(LogicModuleBase):
                 LogicBase.Services = LibGdrive.sa_authorize_for_multiple_connection(ModelSetting.get('gdrive_auth_path'), ModelSetting.get_int('gdrive_thread_num'))
                 ret = LibGdrive.sa_authorize(json_path)
                 if ret == True: ModelSetting.set('gdrive_auth_path', json_path)
+            elif sub == 'send_scan':
+                db_id = int(req.form['id'])
+                ret = LogicBase.send_plex_scan(self.name, db_id)
             return jsonify(ret)
 
         except Exception as e: 
@@ -194,6 +197,27 @@ class LogicBase(LogicModuleBase):
             P.logger.error(traceback.format_exc())
             return jsonify({'ret':'exception', 'msg':str(e)})
 
+    @staticmethod
+    def send_plex_scan(module_name, db_id):
+        try:
+            if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
+            LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'REFRESH', 'now':datetime.now()})
+            #TODO: 특별한 경우에만 처리
+            from system.logic_command import SystemLogicCommand
+            if os.path.isfile(ModelSetting.get('rclone_bin_path')):
+                rc_path = ScmUtil.get_rc_path(entity.plex_path)
+                command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
+                logger.debug('[send_plex_scan] rc vfs/refresh: %s', rc_path)
+                data = SystemLogicCommand.execute_command_return(command)
+                if data.find('jobid') == -1:
+                    return {'ret':'failed', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}
+
+            return {'ret':'success', 'msg':u'스캔명령 전송을 완료 하였습니다({}).'.format(entity.plex_path)}
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return {'ret':'error', 'msg':'스캔명령 전송 실패: 로그를 확인하세요.'}
 
     def scheduler_function(self):
         logger.debug('scheduler function!!!!!!!!!!!!!!')
@@ -219,6 +243,11 @@ class LogicBase(LogicModuleBase):
 
             creds_dir = os.path.dirname(ModelSetting.get('gdrive_creds_path'))
             if not os.path.isdir(creds_dir): os.makedirs(creds_dir)
+
+            popper_path = os.path.join(path_data, 'templates', 'base_with_popper.html')
+            if os.path.isfile(popper_path) != True:
+                opath = os.path.join(path_data, package_name, 'templates', 'base_with_popper.html')
+                if os.path.isfile(opath): shutil.copy(opath, popper_path)
 
             ret = LibGdrive.sa_authorize(json_path)
             if ret == True: ModelSetting.set('gdrive_sa_auth', 'True')

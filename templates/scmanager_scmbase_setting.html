@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_with_popper.html" %}
 {% block content %}
 
 <div>
@@ -118,6 +118,17 @@ $(document).ready(function(){
   } else {
     document.getElementById('user_auth_status').innerHTML = '<strong style="font-color:red;">미인증(사용불가)</strong>';
   }
+  //var new_scs = document.createElement('script');
+  //new_scs.src = '/static/js/popper.min.js';
+  //var _head = document.getElementsByTagName('head');
+  //var _scs = _head[0].getElementsByTagName('script');
+  //for (var i = 0; i < _scs.length; i++) {
+    //alert(_scs[i].src);
+    //if (_scs[i].src.endsWith('bootstrap.min.js')) {
+      //_head[0].insertBefore(new_scs, _scs[i]);
+      //break;
+    //}
+  //}
 });
 
 $("body").on('click', '#auth_step1_btn', function(e) {

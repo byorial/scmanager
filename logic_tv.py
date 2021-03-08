@@ -158,7 +158,7 @@ class LogicTv(LogicModuleBase):
                         command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
                         logger.debug('[tv_schedule] rc vfs/refresh: %s', rc_path)
                         data = SystemLogicCommand.execute_command_return(command)
-                        if data.find('OK') == -1:
+                        if data.find('jobid') == -1:
                             data = {'type':'warning', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}
                             socketio.emit("notify", data, namespace='/framework', broadcate=True)
                             logger.error('[tv_schdule]: failed to vfs/refresh(%s/%s)', ModelSetting.get('rclone_bin_path'), ModelSetting.get('rclone_rc_addr'))
