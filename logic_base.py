@@ -374,8 +374,9 @@ class LogicBase(LogicModuleBase):
                 if rule.agent_type.startswith('av'): rule.item_count = ModelAvItem.get_item_count(rule.id)
                 else: rule.item_count = ModelTvMvItem.get_item_count(rule.id)
                 rule.save()
-                data = {'type':'success', 'msg':u'경로규칙 <strong>"{n}"</strong>에 {c} 항목을 추가하였습니다.(중복:{r})'.format(n=rule.name, c=count, r=rcount)}
-                socketio.emit("notify", data, namespace='/framework', broadcate=True)
+                if count > 0:
+                    data = {'type':'success', 'msg':u'경로규칙 <strong>"{n}"</strong>에 {c} 항목을 추가하였습니다.(중복:{r})'.format(n=rule.name, c=count, r=rcount)}
+                    socketio.emit("notify", data, namespace='/framework', broadcate=True)
                 logger.debug('[schedule]: ended(name:%s, new: %d, skip: %d)', rule.name, count, rcount)
 
         except Exception as e:

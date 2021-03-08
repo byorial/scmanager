@@ -151,14 +151,14 @@ class LogicTv(LogicModuleBase):
                     fpath = os.path.join(entity.plex_path, children[0]['name'])
                     LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':fpath, 'action':'REFRESH', 'now':datetime.now()})
 
-                    if entity.local_path != '' and os.path.isfile(ModelSetting.get('rclone_bin_path')):
+                    if os.path.isfile(ModelSetting.get('rclone_bin_path')):
                         from system.logic_command import SystemLogicCommand
                         # /usr/bin/rclone rc vfs/refresh recursive=true --rc-addr 127.0.0.1:5572 _async=true
 			rc_path = ScmUtil.get_rc_path(entity.plex_path)
                         command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
+                        logger.debug('[tv_schedule] rc vfs/refresh: %s', rc_path)
                         data = SystemLogicCommand.execute_command_return(command)
-                        debug.logger(json.dumps(data, indent=2))
-                        if data.find('Failed'):
+                        if data.find('OK') == -1:
                             data = {'type':'warning', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}
                             socketio.emit("notify", data, namespace='/framework', broadcate=True)
                             logger.error('[tv_schdule]: failed to vfs/refresh(%s/%s)', ModelSetting.get('rclone_bin_path'), ModelSetting.get('rclone_rc_addr'))

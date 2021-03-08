@@ -891,11 +891,10 @@ class ScmUtil(LogicModuleBase):
                 for rule in rules:
                     tmp = rule.split('|')
                     if plex_path.startswith(tmp[1]):
-                        ret = plex_path.replace(tmp[1], '')
+                        ret = plex_path.replace(tmp[1], '').replace('\\\\', '\\').replace('\\', '/')
                         if ret[0] == '/': ret = ret[1:]
-                        elif ret[0] == '\\': ret = ret[1:]
-                        return ret
-            return ret
+                        return ret.encode('utf-8')
+            return ret.encode('utf-8')
 
         except Exception as e:
             logger.error('Exception:%s', e)

@@ -108,7 +108,7 @@ var genres = str_genres.split(',');
 
 $(document).ready(function(){
   formData = get_formdata('#form_search');
-  set_referrer();
+  set_heads();
   set_category_options();
   set_genre_options();
   global_sub_request_search('1', true);
@@ -477,15 +477,14 @@ function refresh_info(id) {
   });
 }
 
-function set_referrer() {
+function set_heads() {
   delete window.document.referrer;
   window.document.__defineGetter__('referrer', function () {
     return "no-referrer";
   });
-//var meta = document.createElement('meta');
-//meta.name = "referrer";
-//meta.content = "no-referrer";
-//document.getElementsByTagName('head')[0].appendChild(meta);
+  //sc = document.createElement('script');
+  //sc.src='https://unpkg.com/@popperjs/core@2.9.0/dist/umd/popper.min.js';
+  //document.getElementsByTagName('head')[0].appendChild(sc);
 }
 
 function set_category_options() {
