@@ -194,13 +194,13 @@ function make_list(data) {
       if (data[i].shortcut_created == false) {
         str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'add_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
       } else {
-        str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'send_scan_btn', 'name':'스캔명령전송', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'add_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
+        str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'send_scan_btn', 'name':'스캔명령전송', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'refresh_plexmeta_btn', 'name':'메타데이터갱신', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'refresh_vfs_btn', 'name':'마운트캐시갱신', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'divider'},{'btn_id':'add_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
       }
     } else {
       if (data[i].shortcut_created == false) {
         str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'del_excluded_btn', 'name':'목록에추가', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'item_remove_btn', 'name':'목록에서완전삭제', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
       } else {
-       str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'send_scan_btn', 'name':'스캔명령전송', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'divider'},{'btn_id':'del_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'item_remove_btn', 'name':'목록에서완전삭제', 'data':[{'key':'id', 'value':data[i].id}]}],'primary');
+       str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'send_scan_btn', 'name':'스캔명령전송', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'refresh_plexmeta_btn', 'name':'메타데이터갱신', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'refresh_vfs_btn', 'name':'마운트캐시갱신', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'divider'},{'btn_id':'del_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'item_remove_btn', 'name':'목록에서완전삭제', 'data':[{'key':'id', 'value':data[i].id}]}],'primary');
       }
     }
     str += '<small class="text-muted"></small>';
@@ -453,10 +453,11 @@ function set_category_options() {
   }
 }
 
-$("body").on('click', '#send_scan_btn', function(e){
+$("body").on('click', '#send_scan_btn,#refresh_plexmeta_btn,#refresh_vfs_btn', function(e){
+  var ajax_uri = $(this).attr('id').replace('_btn', '');
   e.preventDefault();
   var id = $(this).data('id');
-  send_plex_scan(id);
+  do_scmbase_ajax(ajax_uri, id);
 });
 
 $("body").on('click', '#get_children_btn', function(e){
@@ -549,12 +550,12 @@ $("#request_modal_btn").click(function(e) {
   $("#request_msg_modal").modal();
 });
 
-function send_plex_scan(id) {
+function do_scmbase_ajax(ajax_uri, id) {
   $.ajax({
-    url: '/' + package_name + '/ajax/scmbase/send_scan',
+    url: '/' + package_name + '/ajax/scmbase/'+ajax_uri,
     type: "POST",
     cache: false,
-    data: {'id':id},
+    data: {'id':id, agent_type:'av'},
     dataType: "json",
     success: function (data) {
       if ( data.ret == 'success') {

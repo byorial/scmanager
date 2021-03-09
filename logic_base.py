@@ -189,7 +189,16 @@ class LogicBase(LogicModuleBase):
                 if ret == True: ModelSetting.set('gdrive_auth_path', json_path)
             elif sub == 'send_scan':
                 db_id = int(req.form['id'])
-                ret = LogicBase.send_plex_scan(self.name, db_id)
+                agent_type = req.form['agent_type']
+                ret = LogicBase.send_plex_scan(agent_type, db_id)
+            elif sub == 'refresh_plexmeta':
+                db_id = int(req.form['id'])
+                agent_type = req.form['agent_type']
+                ret = LogicBase.refresh_plex_meta(agent_type, db_id)
+            elif sub == 'refresh_vfs':
+                db_id = int(req.form['id'])
+                agent_type = req.form['agent_type']
+                ret = LogicBase.refresh_plex_vfs(agent_type, db_id)
             return jsonify(ret)
 
         except Exception as e: 
@@ -198,12 +207,37 @@ class LogicBase(LogicModuleBase):
             return jsonify({'ret':'exception', 'msg':str(e)})
 
     @staticmethod
-    def send_plex_scan(module_name, db_id):
+    def send_plex_scan(agent_type, db_id):
         try:
-            if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
+            if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
             else: entity = ModelTvMvItem.get_by_id(db_id)
             LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'REFRESH', 'now':datetime.now()})
-            #TODO: 특별한 경우에만 처리
+            return {'ret':'success', 'msg':u'스캔명령 전송을 완료 하였습니다({}).'.format(entity.plex_path)}
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return {'ret':'error', 'msg':'스캔명령 전송 실패: 로그를 확인하세요.'}
+
+    @staticmethod
+    def refresh_plex_meta(agent_type, db_id):
+        try:
+            if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
+            metadata_id = os.path.basename(entity.plex_metadata_id)
+            import plex
+            ret = plex.LogicNormal.metadata_refresh(metadata_id=metadata_id)
+            if ret: return {'ret':'success', 'msg':u'메타갱신 요청완료({}).'.format(entity.plex_path)}
+            else: return {'ret':'error', 'msg':u'메타갱신 요청실패({}).'.format(entity.plex_path)}
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return {'ret':'error', 'msg':'메타갱신 요청실패: 로그를 확인하세요.'}
+
+    @staticmethod
+    def refresh_plex_vfs(agent_type, db_id):
+        try:
+            if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
             from system.logic_command import SystemLogicCommand
             if os.path.isfile(ModelSetting.get('rclone_bin_path')):
                 rc_path = ScmUtil.get_rc_path(entity.plex_path)
@@ -213,7 +247,7 @@ class LogicBase(LogicModuleBase):
                 if data.find('jobid') == -1:
                     return {'ret':'failed', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}
 
-            return {'ret':'success', 'msg':u'스캔명령 전송을 완료 하였습니다({}).'.format(entity.plex_path)}
+            return {'ret':'success', 'msg':u'VFS/REFRESH 완료({}).'.format(entity.plex_path)}
         except Exception as e:
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
