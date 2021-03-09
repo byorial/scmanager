@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "base_with_popper.html" %}
 {% block content %}
 
 
@@ -181,27 +181,28 @@ function make_list(data) {
     str += '</small>';
     str += '</p>';
     str += '<div class="d-flex justify-content-between align-items-center" style="padding:2px 1px 2px 1px;"><br>';
-    tmp = m_button_tt('global_json_btn', 'J', [{'key':'id', 'value':data[i].id}], 'info', '상세정보 확인(json)', 'down-left', 'small');
-    tmp += m_button_tt('get_children_btn', 'F', [{'key':'id', 'value':data[i].id}], 'success', '하위경로파일정보확인', 'down-left', 'small');
     if (data[i].shortcut_created == false) {
-      if (data[i].excluded == false) {
-        tmp += m_button_tt('shortcut_create_btn', 'P', [{'key':'id', 'value':data[i].id}], 'info', '해당작품을 Plex에 추가', 'down-left', 'small');
-      }
-      tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보 검색/갱신', 'down', 'small');
-      //tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down-right', 'small');
+      tmp = m_button_tt('shortcut_create_btn', 'Plex추가', [{'key':'id', 'value':data[i].id}], 'info', '해당프로그램을 Plex에 추가합니다', 'down-left', 'small');
+      tmp += m_button_tt('get_children_btn', '목록', [{'key':'id', 'value':data[i].id}], 'success', '하위경로파일정보확인', 'down', 'small');
     } else {
-      tmp += m_button_tt('info_search_btn', 'M', [{'key':'idx', 'value':i}], 'info', '메타정보 검색/갱신', 'down-left', 'small');
-      //tmp += m_button_tt('play_trailer_btn', 'T', [{'key':'trailer_url', 'value':data[i].trailer_url}], 'success', '예고편재생', 'down', 'small');
-      tmp += m_button_tt('shortcut_remove_btn', 'D', [{'key':'id', 'value':data[i].id}], 'danger', '해당작품을 Plex에서 삭제', 'down-right', 'small');
-    }
-    if (data[i].excluded == false) {
-      tmp += m_button_tt('add_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에서 제외하기', 'down-right', 'small');
-    } else {
-      tmp += m_button_tt('item_remove_btn', 'D', [{'key':'id', 'value':data[i].id}], 'danger', '아이템을 목록에서 삭제', 'down', 'small');
-      tmp += m_button_tt('del_excluded_btn', 'E', [{'key':'id', 'value':data[i].id}], 'secondary', '목록에 추가하기', 'down-right', 'small');
+      tmp = m_button_tt('shortcut_remove_btn', 'Plex삭제', [{'key':'id', 'value':data[i].id}], 'danger', 'Plex에서 해당프로그램 삭제', 'down-left', 'small');
+      tmp += m_button_tt('get_children_btn', '목록', [{'key':'id', 'value':data[i].id}], 'success', '하위경로파일정보확인', 'down', 'small');
     }
     btn_str = m_button_group(tmp);
     str += btn_str;
+    if (data[i].excluded == false) {
+      if (data[i].shortcut_created == false) {
+        str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'add_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
+      } else {
+        str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'send_scan_btn', 'name':'스캔명령전송', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'add_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
+      }
+    } else {
+      if (data[i].shortcut_created == false) {
+        str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'del_excluded_btn', 'name':'목록에추가', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'item_remove_btn', 'name':'목록에서완전삭제', 'data':[{'key':'id', 'value':data[i].id}]}], 'primary');
+      } else {
+       str += m_button_dd('more_action_btn', 'ⵈ', [{'btn_id':'global_json_btn', 'name':'상세정보(json)', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'info_search_btn', 'name':'메타정보검색', 'data':[{'key':'idx', 'value':i}]},{'btn_id':'divider'},{'btn_id':'send_scan_btn', 'name':'스캔명령전송', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'divider'},{'btn_id':'del_excluded_btn', 'name':'목록에서제외', 'data':[{'key':'id', 'value':data[i].id}]},{'btn_id':'item_remove_btn', 'name':'목록에서완전삭제', 'data':[{'key':'id', 'value':data[i].id}]}],'primary');
+      }
+    }
     str += '<small class="text-muted"></small>';
     str += '</div>';
     str += '</div>';
@@ -452,6 +453,12 @@ function set_category_options() {
   }
 }
 
+$("body").on('click', '#send_scan_btn', function(e){
+  e.preventDefault();
+  var id = $(this).data('id');
+  send_plex_scan(id);
+});
+
 $("body").on('click', '#get_children_btn', function(e){
   e.preventDefault();
   id = $(this).data('id');
@@ -542,6 +549,24 @@ $("#request_modal_btn").click(function(e) {
   $("#request_msg_modal").modal();
 });
 
+function send_plex_scan(id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/scmbase/send_scan',
+    type: "POST",
+    cache: false,
+    data: {'id':id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+      global_sub_request_search(current_page, false);
+    }
+  });
+}
+
 $("body").on('click', '#request_msg_btn', function(e) {
   e.preventDefault();
   msg = document.getElementById('request_msg').value
@@ -561,16 +586,5 @@ $("body").on('click', '#request_msg_btn', function(e) {
   });
 });
 
-function m_button_tt(id, text, data, outline_color, title="none", pos="down", size="small") {
-  var str = '<button id="'+id+'" name="'+id+'" class="btn btn-sm btn-outline-'+outline_color+'" '
-  if (title == "none") str += ' aria-label="' +text+'"';
-  else str += ' aria-label="' +title+'"';
-  str += ' data-balloon-pos="' +pos+ '" data-balloon-length="'+size+'"';
-  for ( var i in data) {
-    str += ' data-' + data[i].key + '="' + data[i].value+ '" '
-  }
-  str += '>' + text + '</button>';
-  return str;
-}
 </script>    
 {% endblock %}
