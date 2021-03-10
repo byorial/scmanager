@@ -304,6 +304,7 @@ class ScmUtil(LogicModuleBase):
             entity.year = py_unicode(info['year'])
             entity.genre = py_unicode(info['genre'])
             entity.title = py_unicode(title)
+            entity.country = py_unicode(info['country'])
             entity.save()
             
             return { 'ret':'success', 'msg':'"{}"의 메타정보 적용완료.'.format(entity.title) }
