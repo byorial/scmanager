@@ -404,9 +404,11 @@ class LogicBase(LogicModuleBase):
                     if rule.agent_type.startswith('av'): entity  = ModelAvItem(ui_code, folder_id)
                     else: entity  = ModelTvMvItem(name, folder_id, rule.name, rule.id)
 
-                    info = ScmUtil.info_metadata(rule.agent_type, r['code'], r['title'])
+                    try: info = ScmUtil.info_metadata(rule.agent_type, r['code'], r['title'])
+                    except: info = None
                     if info == None:
-                        info = ScmUtil.info_metadata(rule.agent_type, r['code'], name)
+                        try: info = ScmUtil.info_metadata(rule.agent_type, r['code'], name)
+                        except: info = None
                         if info == None:
                             logger.debug(u'메타정보 조회실패: %s:%s', rule.agent_type, name)
                             continue
