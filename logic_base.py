@@ -241,17 +241,21 @@ class LogicBase(LogicModuleBase):
             from system.logic_command import SystemLogicCommand
             if os.path.isfile(ModelSetting.get('rclone_bin_path')):
                 rc_path = ScmUtil.get_rc_path(entity.plex_path)
-                command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
                 logger.debug('[send_plex_scan] rc vfs/refresh: %s', rc_path)
-                data = SystemLogicCommand.execute_command_return(command)
-                if data.find('jobid') == -1:
+                #command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path]
+                command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
+                ret = SystemLogicCommand.execute_command_return(command, format='json')
+                #logger.debug(ret)
+                if 'jobid' not in ret:
                     return {'ret':'failed', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}
 
-            return {'ret':'success', 'msg':u'VFS/REFRESH 완료({}).'.format(entity.plex_path)}
+                return {'ret':'success', 'msg':u'VFS/REFRESH 요청완료(jobid({}):{}).'.format(str(ret['jobid']), entity.plex_path)}
+
+            return {'ret':'error', 'msg':u'VFS/REFRESH 갱신실패({}).'.format(entity.plex_path)}
         except Exception as e:
             logger.debug('Exception:%s', e)
             logger.debug(traceback.format_exc())
-            return {'ret':'error', 'msg':'스캔명령 전송 실패: 로그를 확인하세요.'}
+            return {'ret':'error', 'msg':u'VFS/REFRESH 갱신실패({}).'.format(entity.plex_path)}
 
     def scheduler_function(self):
         logger.debug('scheduler function!!!!!!!!!!!!!!')
