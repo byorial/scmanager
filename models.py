@@ -402,9 +402,11 @@ class ModelTvMvItem(db.Model):
                 else: query = query.filter(cls.shortcut_created == False)
 
         if order == 'desc':
-            query = query.order_by(desc(cls.id))
+            query = query.order_by(desc(cls.updated_time))
+            #query = query.order_by(desc(cls.id))
         else:
-            query = query.order_by(cls.id)
+            query = query.order_by(desc(cls.updated_time))
+            #query = query.order_by(cls.id)
 
         return query 
 
@@ -611,9 +613,11 @@ class ModelAvItem(db.Model):
                 else: query = query.filter(cls.shortcut_created == False)
 
         if order == 'desc':
-            query = query.order_by(desc(cls.id))
+            query = query.order_by(desc(cls.updated_time))
+            #query = query.order_by(desc(cls.id))
         else:
-            query = query.order_by(cls.id)
+            query = query.order_by(cls.updated_time)
+            #query = query.order_by(desc(cls.id))
 
         return query 
 
