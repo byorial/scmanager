@@ -378,6 +378,16 @@ class LogicBase(LogicModuleBase):
                     entity = ScmUtil.get_entity_by_folder_id(rule.agent_type, folder_id)
                     if entity != None:
                         logger.debug(u'[schedule] SKIP: 이미 존재하는 아이템: %s', name)
+                        if entity.rule_id != rule.id:
+                            entity.rule_id = rule.id
+                            entity.rule_name = rule.name
+                            entity.agent_type = rule.agent_type
+                            entity.root_folder_id = rule.root_folder_id
+                            entity.target_folder_id = rule.target_folder_id
+                            entity.orig_gdrive_path = LibGdrive.get_gdrive_fullpath(entity.folder_id, service=service)
+                            entity.save()
+                            logger.debug(u'(%d) UPDATE: 부모폴더가 갱신되어 업데이트: %s', thread_id, name)
+
                         rcount += 1
                         if rule.use_auto_create_shortcut and entity.shortcut_created == False and entity.excluded == False:
                             LogicBase.ShortcutJobQueue.put({'id':entity.id, 'agent_type':entity.agent_type})
@@ -499,6 +509,16 @@ class LogicBase(LogicModuleBase):
                     entity = ScmUtil.get_entity_by_folder_id(rule.agent_type, folder_id)
                     if entity != None:
                         logger.debug(u'(%d) SKIP: 이미 존재하는 아이템: %s', thread_id, name)
+                        if entity.rule_id != rule.id:
+                            entity.rule_id = rule.id
+                            entity.rule_name = rule.name
+                            entity.agent_type = rule.agent_type
+                            entity.root_folder_id = rule.root_folder_id
+                            entity.target_folder_id = rule.target_folder_id
+                            entity.orig_gdrive_path = LibGdrive.get_gdrive_full_path(entity.folder_id)
+                            entity.save()
+                            logger.debug(u'(%d) UPDATE: 부모폴더가 갱신되어 업데이트: %s', thread_id, name)
+
                         rcount += 1
                         if rule.use_auto_create_shortcut and entity.shortcut_created == False and entity.excluded == False:
                             LogicBase.ShortcutJobQueue.put({'id':entity.id, 'agent_type':entity.agent_type})
