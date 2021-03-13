@@ -332,6 +332,13 @@ class ModelTvMvItem(db.Model):
         return db.session.query(cls).filter_by(rule_id=rule_id).count()
 
     @classmethod
+    def update_all_rows_by_rule_id(cls, rule_id, col_values):
+        query = db.session.query(cls)
+        query = query.filter(cls.rule_id==rule_id)
+        query.update(col_values)
+        db.session.commit()
+
+    @classmethod
     def web_list(cls, module_name, req):
         try:
             ret = {}
@@ -552,6 +559,13 @@ class ModelAvItem(db.Model):
     def get_all_entities_group_by_parent(cls, rule_id):
         query = db.session.query(cls)
         return query.filter(cls.rule_id==rule_id).group_by(cls.parent_folder_id).all()
+
+    @classmethod
+    def update_all_rows_by_rule_id(cls, rule_id, col_values):
+        query = db.session.query(cls)
+        query = query.filter(cls.rule_id==rule_id)
+        query.update(col_values)
+        db.session.commit()
 
     @classmethod
     def web_list(cls, req):
