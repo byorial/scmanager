@@ -20,6 +20,7 @@
               <option value="false">숏컨미생성</option>
               <option value="onair">방영중</option>
               <option value="ended">방영종료</option>
+              <option value="episode">에피추가</option>
               <option value="excluded">제외목록</option>
             </select>
          </span>
@@ -82,6 +83,7 @@
     {{ macros.m_col(2, macros.m_strong('유형')) }}
     {{ macros.m_col(6, macros.m_strong('파일명/ID')) }}
     {{ macros.m_col(2, macros.m_strong('사이즈')) }}
+    {{ macros.m_col(2, macros.m_strong('Plex')) }}
     {{ macros.m_row_end() }}
     {{ macros.m_hr_head_bottom() }}
     <div id="children_info_list"></div>
@@ -226,6 +228,55 @@ $("body").on('click', '#send_scan_btn,#refresh_plexmeta_btn,#refresh_vfs_btn', f
   do_scmbase_ajax(ajax_uri, id);
 });
 
+$("body").on('click', '#shortcut_remove_episode_btn', function(e){
+  e.preventDefault();
+  entity_id = $(this).data('entity_id');
+  file_id = $(this).data('file_id');
+  remove_episode_shortcut(entity_id, file_id);
+});
+
+$("body").on('click', '#shortcut_create_episode_btn', function(e){
+  e.preventDefault();
+  entity_id = $(this).data('entity_id');
+  file_id = $(this).data('file_id');
+  create_episode_shortcut(entity_id, file_id);
+});
+
+function remove_episode_shortcut(entity_id, file_id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/remove_episode_shortcut',
+    type: "POST",
+    cache: false,
+    data: {'entity_id':entity_id, 'shortcut_id':file_id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+}
+
+
+function create_episode_shortcut(entity_id, file_id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/create_episode_shortcut',
+    type: "POST",
+    cache: false,
+    data: {'entity_id':entity_id, 'file_id':file_id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+}
+
 function item_remove(id) {
   $.ajax({
     url: '/' + package_name + '/ajax/'+sub+'/remove_item',
@@ -303,6 +354,14 @@ function get_children_info(id) {
           str += m_col(6, tmp);
 	  bytes = parseInt(data.list[k].size)
           str += m_col(2, get_byte_str(bytes))
+	  if (data.list[k].in_plex == "False") {
+	    tmp = m_button_tt('shortcut_create_episode_btn', 'Plex추가', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].id}], 'info', '해당에피소드를 Plex에 추가합니다', 'down', 'small');
+	  } else if (data.list[k].in_plex == "True") {
+	    tmp = m_button_tt('shortcut_remove_episode_btn', 'Plex삭제', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].shortcut_id}], 'danger', '해당에피소드를 Plex에서 삭제합니다.', 'down', 'small');
+	  } else {
+	    tmp = '<span align="center">-</span>';
+	  }
+	  str += tmp;
           str += m_row_end();
           if (k != data.list.length -1) {str += m_hr();}
         }

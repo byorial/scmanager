@@ -21,7 +21,7 @@ from tool_expand import ToolExpandFileProcess
 
 # GDrive Lib
 from lib_gdrive import LibGdrive
-from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem
+from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelEpisodeItem, ModelSubFolderItem
 from .utils import ScmUtil
 
 # 패키지
@@ -71,6 +71,8 @@ class LogicBase(LogicModuleBase):
         'ktv_meta_result_limit_per_site': u'3',
         #'ktv_use_season_folder': u'True',
         'ktv_shortcut_name_rule': '{title} ({year})',
+        'ktv_episode_base_path': u'/mnt/pms',
+        'ktv_episode_base_folder_id': u'',
 
         # for ftv
         'ftv_meta_result_limit_per_site': u'3',
@@ -100,6 +102,8 @@ class LogicBase(LogicModuleBase):
     RemoveHandlerThread = None
     RemoveJobQueue = None
 
+    KtvEpisodeBasePath = None
+    KtvEpisodeBaseFolderId = None
 
     def __init__(self, P):
         super(LogicBase, self).__init__(P, 'rulelist')
@@ -236,11 +240,13 @@ class LogicBase(LogicModuleBase):
     @staticmethod
     def refresh_plex_vfs(agent_type, db_id):
         try:
-            if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
+            if agent_type == 'episode': entity = ModelEpisodeItem.get_by_id(db_id)
+            elif agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
             else: entity = ModelTvMvItem.get_by_id(db_id)
             from system.logic_command import SystemLogicCommand
             if os.path.isfile(ModelSetting.get('rclone_bin_path')):
-                rc_path = ScmUtil.get_rc_path(entity.plex_path)
+                if agent_type == 'episode': rc_path = ScmUtil.get_rc_path(os.path.dirname(entity.plex_path))
+                else: rc_path = ScmUtil.get_rc_path(entity.plex_path)
                 logger.debug('[send_plex_scan] rc vfs/refresh: %s', rc_path)
                 #command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path]
                 command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
@@ -612,7 +618,7 @@ class LogicBase(LogicModuleBase):
 
                 item_id  = req['id']
                 agent_type  = req['agent_type']
-                queued_time= req['now']
+                queued_time = req['now']
                 action = req['action']
                 plex_path = req['path']
 
@@ -627,7 +633,9 @@ class LogicBase(LogicModuleBase):
                 logger.debug('스캔명령 전송: server(%s), token(%s), section_id(%s)', server, token, section_id)
                 scan_path = py_urllib.quote(plex_path.encode('utf-8'))
                 callback_id = '{}|{}|{}'.format(agent_type, str(item_id), action)
-                if action == 'REFRESH': action = 'ADD'
+                if action.endswith('EPISODE'): LogicBase.refresh_plex_vfs('episode', item_id)
+                if action == 'REFRESH' or action == 'ADDEPISODE': action = 'ADD'
+                if action == 'REMOVEEPISODE': action = 'REMOVE'
                 plex.Logic.send_scan_command2(package_name, section_id, scan_path, callback_id, action, package_name)
                 LogicBase.PlexScannerQueue.task_done()
                 logger.debug('plex_scanner_thread...job-end()')
@@ -648,10 +656,15 @@ class LogicBase(LogicModuleBase):
             agent_type,db_id,action = req['id'].split('|')
             filename = req['filename']
             logger.debug('[CALLBACK]: %s,%s,%s,%s', agent_type, db_id, action, filename)
+            EPI = False
 
             entity = None
-            if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(int(db_id))
-            else: entity = ModelTvMvItem.get_by_id(int(db_id))
+            if action == 'ADDEPISODE' or action == 'REMOVEEPISODE':
+                entity = ModelEpisodeItem.get_by_id(int(db_id))
+                EPI = True
+            else:
+                if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(int(db_id))
+                else: entity = ModelTvMvItem.get_by_id(int(db_id))
 
             if action == 'REFRESH':
                 entity.updated_time = datetime.now()
@@ -663,7 +676,7 @@ class LogicBase(LogicModuleBase):
                 logger.debug('[CALLBACK]: REFRESH done')
                 return
 
-            if action == 'ADD':
+            if action == 'ADD' or action == 'ADDEPISODE':
                 if entity == None:
                     logger.error('[CALLBACK] ADD-failed to get entity(id:%s)', db_id)
                     return
@@ -711,7 +724,7 @@ class LogicBase(LogicModuleBase):
                 if metadata_id == '':
                     logger.error('[CALLBACK] REMOVE-failed to get metadata_id(path:%s)', filename)
                     return
-                if agent_type == 'ktv' or agent_type == 'ftv':
+                if agent_type.endswith('tv') and EPI != True:
                     metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
 
                 if plex.LogicNormal.os_path_exists(filename) == False: # 존재하지 않는 경우만 삭제
@@ -740,15 +753,32 @@ class LogicBase(LogicModuleBase):
                 metadata_id = ''
                 if ret['ret'] == True:
                     for item in ret['list']:
-                        if item['dir'] == entity.plex_path:
-                            metadata_id = item['metadata_id']
-                            break
+                        #logger.debug(json.dumps(ret['list'], indent=2))
+                        if EPI:
+                            if item['filepath'] == entity.plex_path:
+                                metadata_id = item['metadata_id']
+                                break
+                        else:
+                            if item['dir'] == entity.plex_path:
+                                metadata_id = item['metadata_id']
+                                break
                 if metadata_id == '':
                     logger.error('[CALLBACK] REMOVE-failed to get metadata_id(path:%s)', entity.plex_path)
                     return
 
-                if agent_type == 'ktv' or agent_type == 'ftv':
-                    metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
+                if EPI == True:
+                    # 마지막 남은 에피소드의 경우 프로그램 삭제처리
+                    if ModelEpisodeItem.get_item_count(entity.entity_id) == 1:
+                        metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
+                        # 생성한 subfolder 삭제
+                        sfentity = None
+                        sfentity = ModelSubFolderItem.get_by_folder_id(entity.parent_folder_id)
+                        if sfentity != None:
+                            logger.debug('[CALLBACK] REMOVE subfolder({})'.format(sfentity.name))
+                            sfentity.delete(sfentity.id)
+                else:
+                    if agent_type.endswith('tv') and EPI != True:
+                        metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
 
                 logger.debug("[CALLBACK] REMOVE-sectiond_id: s, metadata_id: %s", section_id, metadata_id)
                 entity.plex_section_id = section_id
@@ -768,14 +798,17 @@ class LogicBase(LogicModuleBase):
 
                 if res.status_code != 200:
                     logger.error('[CALLBACK] REMOVE-failed to delete metadata(%s,%s)', entity.metadata_id, filename)
+                    if EPI and action == 'REMOVEEPISODE': entity.delete(entity.id)
                     return;
 
-                entity.plex_path = u''
-                entity.gdrive_path = u''
-                entity.local_path = u''
-                entity.plex_section_id = u''
-                entity.plex_metadata_id = u''
-                entity.save()
+                if EPI and action == 'REMOVEEPISODE': entity.delete(entity.id)
+                else:
+                    entity.plex_path = u''
+                    entity.gdrive_path = u''
+                    entity.local_path = u''
+                    entity.plex_section_id = u''
+                    entity.plex_metadata_id = u''
+                    entity.save()
                 return
             else:
                 logger.error('[CALLBACK] REMOVE-file still exists(%s)', entity.plex_path)
@@ -794,7 +827,11 @@ class LogicBase(LogicModuleBase):
                 logger.debug('shortcut_create_thread_function...job-started()')
                 db_id  = req['id']
                 module_name = req['module_name'] if 'module_name' in req else _map[req['agent_type']]
-                ret = LogicBase.create_shortcut(module_name, db_id)
+                if 'file_id' in req:
+                    if module_name.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
+                    else: entity = ModelTvMvItem.get_by_id(db_id)
+                    ret = LogicBase.create_episode_shortcut(entity, req['file_id'])
+                else: ret = LogicBase.create_shortcut(module_name, db_id)
                 if ret['ret'] == 'success': data = {'type':'success', 'msg':ret['msg']}
                 else: data = {'type':'warning', 'msg':ret['msg']}
                 socketio.emit('notify', data, namespace='/framework', broadcast=True)
@@ -825,6 +862,12 @@ class LogicBase(LogicModuleBase):
                     if ret['ret'] != 'success':
                         data = {'type':'warning', 'msg':'바로가기 삭제실패{m}:{id}'.format(m=module_name, id=item_id)}
                         socketio.emit('notify', data, namespace='/framework', broadcast=True)
+                elif target == 'episode_shortcut':
+                    shortcut_id = req['shortcut_id']
+                    ret = LogicBase.remove_episode_shortcut(module_name, item_id, shortcut_id)
+                    if ret['ret'] != 'success':
+                        data = {'type':'warning', 'msg':'바로가기 삭제실패{m}:{id}'.format(m=module_name, id=item_id)}
+                        socketio.emit('notify', data, namespace='/framework', broadcast=True)
                 elif target == 'shortcut_remove_done':
                     rule = ModelRuleItem.get_by_id(item_id)
                     data = {'type':'success', 'msg':'"{r}"의 모든 바로가기를 삭제하였습니다'.format(r=rule.name)}
@@ -852,6 +895,85 @@ class LogicBase(LogicModuleBase):
                 logger.debug('Exception:%s', e)
                 logger.debug(traceback.format_exc())
                 LogicBase.RemoveJobQueue.task_done()
+
+    @staticmethod
+    def create_episode_shortcut(entity, file_id):
+        try:
+            ret = LibGdrive.get_file_info(file_id)
+            if ret['ret'] != 'success':
+                return {'ret':'error', 'msg':'파일정보 획득실패({})'.format(file_id)}
+
+            # 원본파일 정보
+            orig = ret['data']
+            logger.debug('[create_episode_shortcut] {},{},{}'.format(orig['name'],orig['mimeType'],orig['id']))
+
+            # 에피소드감상용 경로에 폴더 생성
+            base_path = ModelSetting.get('ktv_episode_base_path')
+            gdrive_path = ScmUtil.get_gdrive_path(base_path)
+            dir_name = ScmUtil.get_shortcut_name(entity)
+
+            if LogicBase.KtvEpisodeBasePath == None or LogicBase.KtvEpisodeBasePath != base_path:
+                LogicBase.KtvEpisodeBasePath = base_path
+                base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
+                if base_folder_id == None:
+                    return {'ret':'error', 'msg':'에피소드폴더정보 획득실패({})'.format(gdrive_path)}
+                ModelSetting.set('ktv_episode_base_folder_id', base_folder_id)
+                LogicBase.KtvEpisodeBaseFolderId = base_folder_id
+            else:
+                base_folder_id = ModelSetting.get('ktv_episode_base_folder_id')
+                if base_folder_id == u'':
+                    base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
+                    if base_folder_id == None:
+                        return {'ret':'error', 'msg':'에피소드폴더정보 획득실패({})'.format(gdrive_path)}
+                    ModelSetting.set('ktv_episode_base_folder_id', base_folder_id)
+                    LogicBase.KtvEpisodeBaseFolderId = base_folder_id
+
+            sfentity = None
+            sfentity = ModelSubFolderItem.get_by_rule_name_parent(-1, dir_name, base_folder_id)
+            if sfentity == None:
+                ret = LibGdrive.create_sub_folder(dir_name, base_folder_id)
+                if ret['ret'] == 'success':
+                    f = ret['data']
+                    sfentity = ModelSubFolderItem(f['name'], -1, f['folder_id'], f['parent_folder_id'])
+                    sfentity.save()
+                else:
+                    return {'ret':'error', 'msg':'하위폴더 생성 실패({})'.format(dir_name)}
+
+            # 바로가기 생성
+            shortcut_name = orig['name']
+            ret = LibGdrive.create_shortcut(shortcut_name, file_id, sfentity.folder_id)
+            if ret['ret'] != 'success':
+                logger.error('failed to create episode shortcut')
+                return { 'ret':'error', 'msg':'생성실패! 로그를 확인해주세요.' }
+
+            shortcut = ret['data']
+
+            full_path = os.path.join(gdrive_path, dir_name, shortcut_name)
+            plex_path = ScmUtil.get_plex_path(full_path)
+
+            # episode entity create
+            episode = ModelEpisodeItem(shortcut_name, entity.id, entity.agent_type)
+            episode.target_file_id = file_id
+            episode.shortcut_file_id = py_unicode(shortcut['id'])
+            episode.parent_folder_id = sfentity.folder_id
+            episode.plex_path = plex_path
+            episode.save()
+
+            logger.debug(u'바로가기 생성완료(%s)', episode.shortcut_file_id)
+            ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}'.format(n=episode.name) }
+
+            rule = ModelRuleItem.get_by_id(entity.rule_id)
+            if rule.use_plex:
+                LogicBase.PlexScannerQueue.put({'id':episode.id, 'agent_type':episode.agent_type, 'path':episode.plex_path, 'action':'ADDEPISODE', 'now':datetime.now()})
+                ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}, 스캔명령 전송대기'.format(n=episode.name) }
+            return ret
+
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return { 'ret':'error', 'msg':'생성실패! 로그를 확인해주세요.' }
+
+
 
     @staticmethod
     def create_shortcut(module_name, db_id):
@@ -1014,6 +1136,42 @@ class LogicBase(LogicModuleBase):
 
             if rule.use_plex:
                 LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'REMOVE', 'now':datetime.now()})
+                ret = { 'ret':'success', 'msg':'바로가기 삭제 성공{n}, 스캔명령 전송대기'.format(n=entity.name) }
+            return ret
+
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+
+
+    @staticmethod
+    def remove_episode_shortcut(module_name, db_id, shortcut_id):
+        try:
+            if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
+            else: entity = ModelTvMvItem.get_by_id(db_id)
+
+            episode = ModelEpisodeItem.get_by_shortcut_file_id(shortcut_id)
+            logger.debug('remove_shortcut: name(%s)', episode.name)
+
+            if ModelSetting.get_bool('use_trash'):
+                trash_folder_id = ModelSetting.get('trash_folder_id')
+                finfo = LibGdrive.get_file_info(trash_folder_id)
+                if finfo['ret'] != 'success':
+                    return { 'ret':'error', 'msg':'삭제실패! 휴지통 폴더ID를 확인해주세요.' }
+
+                ret = LibGdrive.move_file(shortcut_id, episode.parent_folder_id, ModelSetting.get('trash_folder_id'))
+            else:
+                ret = LibGdrive.delete_file(shortcut_id)
+
+            if ret['ret'] != 'success':
+                return { 'ret':'error', 'msg':'삭제실패! 로그를 확인해주세요.' }
+
+            logger.debug(u'바로가기 삭제완료(%s)', shortcut_id)
+            ret = { 'ret':'success', 'msg':'바로가기 삭제완료{n}'.format(n=entity.title) }
+
+            rule = ModelRuleItem.get_by_id(entity.rule_id)
+            if rule.use_plex:
+                LogicBase.PlexScannerQueue.put({'id':episode.id, 'agent_type':episode.agent_type, 'path':episode.plex_path, 'action':'REMOVEEPISODE', 'now':datetime.now()})
                 ret = { 'ret':'success', 'msg':'바로가기 삭제 성공{n}, 스캔명령 전송대기'.format(n=entity.name) }
             return ret
 

@@ -20,7 +20,7 @@ from tool_base import ToolBaseNotify
 
 # GDrive Lib
 from lib_gdrive import LibGdrive
-from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelSubFolderItem
+from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelSubFolderItem, ModelEpisodeItem
 
 # 패키지
 from .plugin import P
@@ -338,6 +338,16 @@ class ScmUtil(LogicModuleBase):
                 return { 'ret':'error', 'msg':'"{}"의 정보조회 실패.'.format(entity.title) }
 
             children = sorted(children, key=lambda x:x['name'], reverse=True)
+
+            if entity.agent_type == 'ktv' and entity.shortcut_created == False:
+                for child in children:
+                    episode = None
+                    episode = ModelEpisodeItem.get_by_target_file_id(child['id'])
+                    if episode != None:
+                        child['in_plex'] = u'True'
+                        child['shortcut_id'] = episode.shortcut_file_id
+                    else: child['in_plex'] = u'False'
+
             ret['ret'] = 'success'
             ret['list'] = children
             return ret
@@ -855,6 +865,33 @@ class ScmUtil(LogicModuleBase):
                                 ret = ret.replace('\\', '/')
                         return ret
             return gdrive_path
+
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+
+    @staticmethod
+    def get_gdrive_path(plex_path):
+        try:
+            rules = ModelSetting.get('gdrive_plex_path_rule')
+            if rules == u'' or rules.find('|') == -1:
+                return plex_path
+            if rules is not None:
+                rules = rules.split(',')
+                rules = sorted(rules, key=lambda x:len(x.split('|')[0]), reverse=True)
+                for rule in rules:
+                    tmp = rule.split('|')
+
+                    if plex_path.startswith(tmp[1]):
+                        ret = plex_path.replace(tmp[1], tmp[0])
+                        # SJVA-PMS의 플랫폼이 다른 경우
+                        if tmp[0][0] != tmp[1][0]:
+                            if plex_path[0] == '/': # Linux   -> Windows
+                                ret = ret.replace('/', '\\')
+                            else:                  # Windows -> Linux
+                                ret = ret.replace('\\', '/')
+                        return ret
+            return plex_path
 
         except Exception as e:
             logger.error('Exception:%s', e)

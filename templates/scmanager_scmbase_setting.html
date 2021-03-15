@@ -74,6 +74,7 @@
     {{ macros.setting_input_int('ktv_meta_result_limit_per_site', '메타조회결과제한값', value=arg['ktv_meta_result_limit_per_site'], desc='메타조회시 사이트별 표시할 최대 작품 갯수') }}
     <!-- {{ macros.setting_checkbox('ktv_use_season_folder', '시즌폴더 사용', value=arg['ktv_use_season_folder'], desc='On : 작품폴더 하위에 시즌폴더가 있는 경우 프로그램을 시즌별로 등록') }} -->
     {{ macros.setting_input_text('ktv_shortcut_name_rule', '바로가기 이름규칙', value=arg['ktv_shortcut_name_rule'], desc=['바로가기 폴더 이름생성 규칙, 기본값: "제목 (년도)"', '지원: {orig},{title},{year},{genre},{studio}', '{orig}: 원본폴더명']) }}
+    {{ macros.setting_input_text('ktv_episode_base_path', '에피소드감상용 Plex경로', value=arg['ktv_episode_base_path'], desc=['TV프로그램용 에피소드 감상용 경로위치', 'Plex서버 기준 경로']) }}
    {{ macros.m_tab_content_end() }}
    {{ macros.m_tab_content_start('ftv', false) }}
     {{ macros.setting_input_int('ftv_meta_result_limit_per_site', '메타조회결과제한값', value=arg['ftv_meta_result_limit_per_site'], desc='메타조회시 사이트별 표시할 최대 작품 갯수') }}
