@@ -997,12 +997,16 @@ class ScmUtil(LogicModuleBase):
             meta_id = metakey[metakey.rfind('/')+1:]
 
             for i in range(4):
-                query = 'SELECT parent_id from metadata_items where id="{}"'.format(meta_id)
+                query = 'SELECT id,parent_id,metadata_type from metadata_items where id="{}"'.format(meta_id)
                 ret = plex.LogicNormal.execute_query(query)
                 if ret['ret'] != True: return None
-                if ret['data'][0] == u'': break
-                meta_id = ret['data'][0]
+                mid, pid, mtype = ret['data'][0].split('|')
+                if mtype == '2':
+                    meta_id = mid
+                    break
 
+                meta_id = pid
+            logger.debug(u'get_program_metadata_id: {}'.format(meta_id))
             return '/library/metadata/{}'.format(meta_id)
 
         except Exception as e:
