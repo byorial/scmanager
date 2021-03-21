@@ -437,6 +437,16 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
+    def get_all_genres_by_rule_name(rule_name):
+        try:
+            entities = ModelTvMvItem.get_all_genres_by_rule_name(rule_name)
+            genres = [x.genre for x in entities]
+            return list(filter(None, genres))
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+
+    @staticmethod
     def search_ktv_ott(title):
         try:
             info = {}

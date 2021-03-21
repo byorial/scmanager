@@ -323,6 +323,12 @@ class ModelTvMvItem(db.Model):
         return query.group_by(cls.genre).order_by(func.count(cls.id).desc()).all()
 
     @classmethod
+    def get_all_genres_by_rule_name(cls, rule_name):
+        query = db.session.query(cls)
+        query = query.filter(cls.rule_name==rule_name)
+        return query.group_by(cls.genre).order_by(func.count(cls.id).desc()).all()
+
+    @classmethod
     def get_all_entities_group_by_parent(cls, rule_id):
         query = db.session.query(cls)
         return query.filter(cls.rule_id==rule_id).group_by(cls.parent_folder_id).all()

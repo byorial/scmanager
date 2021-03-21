@@ -85,6 +85,9 @@ class LogicMv(LogicModuleBase):
             elif sub == 'msg_request':
                 msg = req.form['msg']
                 ret = ScmUtil.send_message('movie', msg)
+            elif sub == 'get_genres':
+                rule_name = req.form['rulename']
+                ret = ScmUtil.get_all_genres_by_rule_name(rule_name)
             return jsonify(ret)
 
         except Exception as e: 

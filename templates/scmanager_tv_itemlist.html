@@ -8,7 +8,7 @@
       <div class="row show-grid" align="center">
         <span class="col-md-12">
           <span class="col-md-6" style="align-items:left; text-align:left;">
-            <select name='category'>
+            <select name='category' onchange='change_genre_options(value)'>
               <option value="all">전체경로</option>
             </select>
             <select name='genre'>
@@ -599,6 +599,37 @@ function set_genre_options() {
     var g = genres[i].replace(/&amp;/g,'&'); 
     form_search.genre.options[i+1] = new Option(g,g);
   }
+}
+
+function change_genre_options(rulename) {
+  if (rulename == 'all') {
+    form_search.genre.options.length = 0;
+    form_search.genre.options[0] = new Option('전체장르', 'all');
+    for (i = 0; i < genres.length; i++) {
+      var g = genres[i].replace(/&amp;/g,'&'); 
+      form_search.genre.options[i+1] = new Option(g,g);
+    }
+  } else {
+    set_genres(rulename);
+  }
+}
+
+function set_genres(rulename) {
+  $.ajax({
+  url: '/' + package_name + '/ajax/' + sub + '/get_genres',
+    type: "POST", 
+    cache: false,
+    data:{rulename:rulename},
+    dataType: "json",
+    success: function (data) {
+      form_search.genre.options.length = 0;
+      form_search.genre.options[0] = new Option('전체장르', 'all');
+      for (var i=0;i < data.length; i++) {
+        var g = data[i].replace(/&amp;/g,'&'); 
+        form_search.genre.options[i+1] = new Option(g,g);
+      }
+    }
+  });
 }
 
 $("#request_modal_btn").click(function(e) {
