@@ -20,7 +20,7 @@ from tool_base import ToolBaseNotify
 
 # GDrive Lib
 from lib_gdrive import LibGdrive
-from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelSubFolderItem, ModelEpisodeItem
+from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelSubFolderItem, ModelSubItem
 
 # 패키지
 from .plugin import P
@@ -339,10 +339,10 @@ class ScmUtil(LogicModuleBase):
 
             children = sorted(children, key=lambda x:x['name'], reverse=True)
 
-            if entity.agent_type == 'ktv' and entity.shortcut_created == False:
+            if entity.agent_type.endswith('tv') and entity.shortcut_created == False:
                 for child in children:
                     episode = None
-                    episode = ModelEpisodeItem.get_by_target_file_id(child['id'])
+                    episode = ModelSubItem.get_by_target_file_id(child['id'])
                     if episode != None:
                         child['in_plex'] = u'True'
                         child['shortcut_id'] = episode.shortcut_file_id
@@ -512,7 +512,7 @@ class ScmUtil(LogicModuleBase):
             else:
                 count = 0
                 for m in metadata[site]:
-                    if ModelSetting.get_int('ktv_meta_result_limit_per_site') == count: break
+                    if ModelSetting.get_int('ktv_meta_result_limit_per_site') == count: continue
                     info = {}
                     info['site'] = site
                     info['code'] = m['code']
@@ -528,22 +528,29 @@ class ScmUtil(LogicModuleBase):
 
     @staticmethod
     def get_ftv_meta_list(metadata):
-        meta_list = []
-        sites = {}
-        for m in metadata:
-            if m['site'] in sites: sites[m['site']] = sites[m['site']] + 1
-            else: sites[m['site']] = 1
-            if ModelSetting.get_int('ftv_meta_result_limit_per_site') > sites[m['site']]: break
-            info = {}
-            info['site'] = site
-            info['code'] = m['code']
-            info['title'] = m['title']
-            info['genre'] = m['genre']
-            info['studio'] = m['studio']
-            info['score'] = m['score']
-            info['poster_url'] = m['image_url']
-            meta_list.append(info)
-        return meta_list
+        try:
+            meta_list = []
+            sites = {}
+            for m in metadata:
+                #logger.debug(json.dumps(m, indent=2))
+                if m['site'] in sites: sites[m['site']] = sites[m['site']] + 1
+                else: sites[m['site']] = 1
+                if ModelSetting.get_int('ftv_meta_result_limit_per_site') < sites[m['site']]: continue
+                info = {}
+                info['site'] = m['site']
+                info['code'] = m['code']
+                info['title'] = m['title']
+                info['genre'] = m['genre']
+                info['year'] = m['year'] if 'year' in m else 1900
+                info['studio'] = m['studio']
+                info['score'] = m['score']
+                info['poster_url'] = m['image_url']
+                meta_list.append(info)
+                #logger.debug(json.dumps(info, indent=2))
+            return meta_list
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
 
     @staticmethod
     def get_movie_meta_list(metadata):
@@ -825,9 +832,11 @@ class ScmUtil(LogicModuleBase):
             #logger.debug(metadata['genre'])
             info['genre'] = re.sub('[/]','&', metadata['genre'][0])
         else: info['genre'] = u''
-        if agent_type == 'ftv': info['country'] = u''
-        else:
-            if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
+        if 'country' in metadata:
+            #logger.debug(json.dumps(metadata['country'], indent=2))
+            if type(metadata['country']) == type([]):
+                if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
+                else: info['country'] = u''
             else: info['country'] = u'한국' if agent_type == 'ktv' else u''
         return info
     
@@ -991,7 +1000,7 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
 
     @staticmethod
-    def get_program_metadata_id(metakey):
+    def get_program_metadata_id(metakey, sub_type=None):
         try:
             import plex
             meta_id = metakey[metakey.rfind('/')+1:]
@@ -1001,6 +1010,10 @@ class ScmUtil(LogicModuleBase):
                 ret = plex.LogicNormal.execute_query(query)
                 if ret['ret'] != True: return None
                 mid, pid, mtype = ret['data'][0].split('|')
+                if sub_type != None and sub_type == 'season':
+                    if mtype == '3':
+                        meta_id = mid
+                        break
                 if mtype == '2':
                     meta_id = mid
                     break
@@ -1036,4 +1049,54 @@ class ScmUtil(LogicModuleBase):
         m += '내용: '+ msg
         ToolBaseNotify.send_message(m, message_id=message_id)
         return {'ret':'success', 'msg':'자료요청 전송 완료'}
+
+    @staticmethod
+    def check_subfolder(entity_id=None):
+        try:
+            service = None
+            service = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'), return_service=True)
+            if service == None: return {'ret':'error', 'msg':u'서비스계정 인증 실패.'}
+            rcount = 0
+            if entity_id != None:
+                sf = ModelSubFolderItem.get_by_id(entity_id)
+                ret = LibGdrive.get_file_info(sf.folder_id, service=service)
+                if (ret['ret'] != 'success' and ret['data'].find('HttpError 404') != -1) or (ret['ret'] == 'success' and ret['data']['trashed'] == True):
+                    sf.delete(sf.id)
+                return {'ret':'success', 'msg':u'삭제된 폴더아이템 정리 완료'}
+
+            for sf in ModelSubFolderItem.get_all_entities():
+                ret = LibGdrive.get_file_info(sf.folder_id, service=service)
+                # 폴더가 삭제된 경우 처리
+                if (ret['ret'] != 'success' and ret['data'].find('HttpError 404') != -1) or (ret['ret'] == 'success' and ret['data']['trashed'] == True):
+                    logger.debug('[check_subfolder] remove deleted folder({},{})'.format(sf.name, sf.folder_id))
+                    rcount = rcount + 1
+                    sf.delete(sf.id)
+
+            return {'ret':'success', 'msg':u'삭제된 폴더아이템 정리 완료({} 건)'.format(rcount)}
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return {'ret':'error', 'msg':u'폴더아이템 정리 실패.'}
+
+    @staticmethod
+    def check_subitem():
+        try:
+            service = None
+            service = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'), return_service=True)
+            if service == None: return {'ret':'error', 'msg':u'서비스계정 인증 실패.'}
+            rcount = 0
+            for sub in ModelSubItem.get_all_entities():
+                ret = LibGdrive.get_file_info(sub.shortcut_file_id, service=service)
+                # 숏컷이 삭제된 경우 처리
+                if (ret['ret'] != 'success' and ret['data'].find('HttpError 404') != -1) or (ret['ret'] == 'success' and ret['data']['trashed'] == True):
+                    logger.debug('[check_subitem] remove deleted folder({},{})'.format(sub.name, sub.shortcut_file_id))
+                    rcount = rcount + 1
+                    sub.delete(sub.id)
+
+            return {'ret':'success', 'msg':u'삭제된 시즌/에피소드 아이템 정리 완료({} 건)'.format(rcount)}
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return {'ret':'error', 'msg':u'시즌/에피소드 아이템 정리 실패.'}
+
 

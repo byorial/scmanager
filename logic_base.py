@@ -21,7 +21,7 @@ from tool_expand import ToolExpandFileProcess
 
 # GDrive Lib
 from lib_gdrive import LibGdrive
-from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelEpisodeItem, ModelSubFolderItem
+from .models import ModelRuleItem, ModelTvMvItem, ModelAvItem, ModelSubItem, ModelSubFolderItem
 from .utils import ScmUtil
 
 # 패키지
@@ -61,6 +61,7 @@ class LogicBase(LogicModuleBase):
         'gdrive_plex_path_rule' : u'/Video/plex|/mnt/plex',
         'rclone_bin_path': os.path.join(path_data, 'bin', 'Linux', 'rclone'),
         'rclone_rc_addr':'127.0.0.1:5572',
+        'except_subitem_exts': u'.smi|.srt|.ass|.psv|.ssa|.idx|.smil|.sub|.usf|.vtt',
         #'plex_scan_delay': u'30',
         #'plex_scan_min_limit': u'10',
 
@@ -71,13 +72,15 @@ class LogicBase(LogicModuleBase):
         'ktv_meta_result_limit_per_site': u'3',
         #'ktv_use_season_folder': u'True',
         'ktv_shortcut_name_rule': '{title} ({year})',
-        'ktv_episode_base_path': u'/mnt/pms',
-        'ktv_episode_base_folder_id': u'',
+        'ktv_subitem_base_path': u'/mnt/pms',
+        'ktv_subitem_base_folder_id': u'',
 
         # for ftv
         'ftv_meta_result_limit_per_site': u'3',
         #'ftv_use_season_folder': u'True',
         'ftv_shortcut_name_rule': u'{title} ({year})',
+        'ftv_subitem_base_path': u'/mnt/pms/해외드라마',
+        'ftv_subitem_base_folder_id': u'True',
 
         # for movie
         'movie_shortcut_name_rule': u'{title} ({year})',
@@ -102,14 +105,18 @@ class LogicBase(LogicModuleBase):
     RemoveHandlerThread = None
     RemoveJobQueue = None
 
-    KtvEpisodeBasePath = None
-    KtvEpisodeBaseFolderId = None
+    KtvSubitemBasePath = None
+    KtvSubitemBaseFolderId = None
+
+    FtvSubitemBasePath = None
+    FtvSubitemBaseFolderId = None
 
     def __init__(self, P):
         super(LogicBase, self).__init__(P, 'rulelist')
         self.name = 'scmbase'
 
     def plugin_load(self):
+        self.db_migration()
         self.initialize()
 
     def process_menu(self, sub, req):
@@ -203,6 +210,10 @@ class LogicBase(LogicModuleBase):
                 db_id = int(req.form['id'])
                 agent_type = req.form['agent_type']
                 ret = LogicBase.refresh_plex_vfs(agent_type, db_id)
+            elif sub == 'check':
+                action = req.form['action']
+                if action == 'subfolder': ret = ScmUtil.check_subfolder()
+                else: ret = ScmUtil.check_subitem()
             return jsonify(ret)
 
         except Exception as e: 
@@ -240,12 +251,12 @@ class LogicBase(LogicModuleBase):
     @staticmethod
     def refresh_plex_vfs(agent_type, db_id):
         try:
-            if agent_type == 'episode': entity = ModelEpisodeItem.get_by_id(db_id)
+            if agent_type == 'subitem': entity = ModelSubItem.get_by_id(db_id)
             elif agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
             else: entity = ModelTvMvItem.get_by_id(db_id)
             from system.logic_command import SystemLogicCommand
             if os.path.isfile(ModelSetting.get('rclone_bin_path')):
-                if agent_type == 'episode': rc_path = ScmUtil.get_rc_path(os.path.dirname(entity.plex_path))
+                if agent_type == 'subitem': rc_path = ScmUtil.get_rc_path(os.path.dirname(entity.plex_path))
                 else: rc_path = ScmUtil.get_rc_path(entity.plex_path)
                 logger.debug('[send_plex_scan] rc vfs/refresh: %s', rc_path)
                 #command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path]
@@ -275,6 +286,53 @@ class LogicBase(LogicModuleBase):
         """
 
     #########################################################
+    @staticmethod
+    def db_migration():
+        try:
+            import sqlite3
+            import platform
+            db_path = os.path.join(path_data, 'db', '%s.db' % package_name)
+            table_name = '%s_episode_item' % package_name
+            new_table_name = '%s_sub_item' % package_name
+
+            if platform.system() is 'Linux':
+                # connect to read only for Linux
+                fd = os.open(db_path, os.O_RDWR)
+                conn = sqlite3.connect('/dev/fd/%d' % fd)
+                os.close(fd)
+            else:
+                conn = sqlite3.connect(db_path)
+            cur = conn.cursor()
+            q = 'SELECT name FROM sqlite_master WHERE type="table" AND name="{}"'.format(table_name)
+            r = cur.execute(q).fetchall();
+            if len(r) == 0: return
+            if table_name in r[0]:
+                q = 'ALTER TABLE {} rename to {}'.format(table_name, new_table_name)
+                cur.execute(q)
+                conn.commit()
+                logger.info('[db_migration] EpisodeItem changed to SubItem');
+                q = 'PRAGMA table_info("{}")'.format(new_table_name)
+                alter_type = True
+                for row in cur.execute(q).fetchall():
+                    if row[1] == 'sub_type':
+                        alter_type = False
+                        break
+                if alter_type:
+                    conn.close()
+                    return
+
+                q = 'ALTER TABLE {} ADD COlUMN sub_type VARCHAR'.format(new_table_name)
+                cur.execute(q)
+                conn.commit()
+                q = 'UPDATE {} set sub_type = "episode" where agent_type="ktv"'.format(new_table_name)
+                cur.execute(q)
+                conn.commit()
+                conn.close()
+                logger.info('[db_migration] sub_type alterred to SubItem');
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+
     @staticmethod
     def initialize():
         try:
@@ -630,12 +688,12 @@ class LogicBase(LogicModuleBase):
                     LogicBase.PlexScannerQueue.task_done()
                     continue
 
-                logger.debug('스캔명령 전송: server(%s), token(%s), section_id(%s)', server, token, section_id)
                 scan_path = py_urllib.quote(plex_path.encode('utf-8'))
                 callback_id = '{}|{}|{}'.format(agent_type, str(item_id), action)
-                if action.endswith('EPISODE'): LogicBase.refresh_plex_vfs('episode', item_id)
-                if action == 'REFRESH' or action == 'ADDEPISODE': action = 'ADD'
-                if action == 'REMOVEEPISODE': action = 'REMOVE'
+                logger.debug('스캔명령 전송: server(%s), section_id(%s), callback(%s), path(%s)', server, section_id, callback_id, plex_path)
+                if action.endswith('SUBITEM'): LogicBase.refresh_plex_vfs('subitem', item_id)
+                if action == 'REFRESH' or action == 'ADDSUBITEM': action = 'ADD'
+                if action == 'REMOVESUBITEM': action = 'REMOVE'
                 plex.Logic.send_scan_command2(package_name, section_id, scan_path, callback_id, action, package_name)
                 LogicBase.PlexScannerQueue.task_done()
                 logger.debug('plex_scanner_thread...job-end()')
@@ -652,16 +710,15 @@ class LogicBase(LogicModuleBase):
             base_url = '{s}{m}?includeExternalMedia=1&X-Plex-Product=Plex%20Web&X-Plex-Product=Plex%20Web&X-Plex-Version=4.51.1&X-Plex-Platform=Chrome&X-Plex-Platform-Version=88.0&X-Plex-Sync-Version=2&X-Plex-Features=external-media%2Cindirect-media&X-Plex-Model=bundled&X-Plex-Device=Windows&X-Plex-Device-Name=Chrome&X-Plex-Device-Screen-Resolution=1920x937%2C1920x1080&X-Plex-Language=ko&X-Plex-Drm=widevine&X-Plex-Text-Format=plain&X-Plex-Provider-Version=1.3&X-Plex-Token={t}'
             server = PlexModelSetting.get('server_url')
             token = PlexModelSetting.get('server_token')
-            devid = PlexModelSetting.get('machineIdentifier')
             agent_type,db_id,action = req['id'].split('|')
             filename = req['filename']
             logger.debug('[CALLBACK]: %s,%s,%s,%s', agent_type, db_id, action, filename)
-            EPI = False
+            SUBITEM = False
 
             entity = None
-            if action == 'ADDEPISODE' or action == 'REMOVEEPISODE':
-                entity = ModelEpisodeItem.get_by_id(int(db_id))
-                EPI = True
+            if action == 'ADDSUBITEM' or action == 'REMOVESUBITEM':
+                entity = ModelSubItem.get_by_id(int(db_id))
+                SUBITEM = True
             else:
                 if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(int(db_id))
                 else: entity = ModelTvMvItem.get_by_id(int(db_id))
@@ -676,7 +733,7 @@ class LogicBase(LogicModuleBase):
                 logger.debug('[CALLBACK]: REFRESH done')
                 return
 
-            if action == 'ADD' or action == 'ADDEPISODE':
+            if action == 'ADD' or action == 'ADDSUBITEM':
                 if entity == None:
                     logger.error('[CALLBACK] ADD-failed to get entity(id:%s)', db_id)
                     return
@@ -702,7 +759,7 @@ class LogicBase(LogicModuleBase):
 
                 # SHOW의 경우 프로그램 자체의 메타데이터 얻어옴(에피소드> 시즌> 프로그램)
                 if agent_type == 'ktv' or agent_type == 'ftv':
-                    metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
+                    metadata_id = ScmUtil.get_program_metadata_id(metadata_id, sub_type=entity.sub_type)
 
                 logger.debug("[CALLBACK] ADD-sectiond_id: s, metadata_id: %s", section_id, metadata_id)
                 entity.plex_section_id = str(section_id)
@@ -724,11 +781,11 @@ class LogicBase(LogicModuleBase):
                 if metadata_id == '':
                     logger.error('[CALLBACK] REMOVE-failed to get metadata_id(path:%s)', filename)
                     return
-                if agent_type.endswith('tv') and EPI != True:
+                if agent_type.endswith('tv') and SUBITEM != True:
                     metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
 
                 if plex.LogicNormal.os_path_exists(filename) == False: # 존재하지 않는 경우만 삭제
-                    url = base_url.format(s=server, m=metadata_id, t=token, d=devid)
+                    url = base_url.format(s=server, m=metadata_id, t=token)
                     headers = { "Accept": 'application/json',
                             "Accept-Encoding": 'gzip, deflate, br',
                             "Accept-Language": 'ko',
@@ -747,6 +804,7 @@ class LogicBase(LogicModuleBase):
                 section_id = plex.LogicNormal.get_section_id_by_filepath(entity.plex_path)
                 if section_id == -1:
                     logger.error('[CALLBACK] REMOVE-failed to get plex section_id(path:%s)', entity.plex_path)
+                    if SUBITEM: entity.delete(entity.id)
                     return
 
                 ret = plex.LogicNormal.find_by_filename_part(entity.plex_path)
@@ -754,7 +812,7 @@ class LogicBase(LogicModuleBase):
                 if ret['ret'] == True:
                     for item in ret['list']:
                         #logger.debug(json.dumps(ret['list'], indent=2))
-                        if EPI:
+                        if SUBITEM:
                             if item['filepath'] == entity.plex_path:
                                 metadata_id = item['metadata_id']
                                 break
@@ -764,20 +822,28 @@ class LogicBase(LogicModuleBase):
                                 break
                 if metadata_id == '':
                     logger.error('[CALLBACK] REMOVE-failed to get metadata_id(path:%s)', entity.plex_path)
+                    if SUBITEM: entity.delete(entity.id)
                     return
 
-                if EPI == True:
-                    # 마지막 남은 에피소드의 경우 프로그램 삭제처리
-                    if ModelEpisodeItem.get_item_count(entity.entity_id) == 1:
+                if SUBITEM == True:
+                    # 마지막 남은 subitem 경우 프로그램 삭제처리
+                    if ModelSubItem.get_item_count(entity.entity_id) == 1:
                         metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
                         # 생성한 subfolder 삭제
                         sfentity = None
                         sfentity = ModelSubFolderItem.get_by_folder_id(entity.parent_folder_id)
                         if sfentity != None:
                             logger.debug('[CALLBACK] REMOVE subfolder({})'.format(sfentity.name))
-                            sfentity.delete(sfentity.id)
+                            if LibGdrive.is_folder_empty(sfentity.folder_id) == True:
+                                ret = LibGdrive.delete_file(sfentity.folder_id)
+                                if ret['ret'] == 'success': sfentity.delete(sfentity.id)
+                            else:
+                                logger.info('[CALLBACK] folder is not empty({})'.format(sfentity.folder_id))
+                    else:
+                        # 시즌삭제
+                        metadata_id = entity.plex_metadata_id
                 else:
-                    if agent_type.endswith('tv') and EPI != True:
+                    if agent_type.endswith('tv') and SUBITEM != True:
                         metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
 
                 logger.debug("[CALLBACK] REMOVE-sectiond_id: s, metadata_id: %s", section_id, metadata_id)
@@ -786,7 +852,40 @@ class LogicBase(LogicModuleBase):
 
             if plex.LogicNormal.os_path_exists(entity.plex_path) == False: # 존재하지 않는 경우만 삭제
                 metadata_id = entity.plex_metadata_id
-                url = base_url.format(s=server, m=metadata_id, t=token, d=devid)
+                if metadata_id == '' or metadata_id == None:
+                    ret = plex.LogicNormal.find_by_filename_part(entity.plex_path)
+                    if ret['ret'] == True:
+                        for item in ret['list']:
+                            if SUBITEM:
+                                if item['filepath'] == entity.plex_path:
+                                    metadata_id = item['metadata_id']
+                                    break
+                            else:
+                                if item['dir'] == entity.plex_path:
+                                    metadata_id = item['metadata_id']
+                                    break
+
+                if metadata_id == '' or metadata_id == None:
+                    logger.error('[CALLBACK] REMOVE-failed to get metadata_id(path:%s)', entity.plex_path)
+                    if SUBITEM: entity.delete(entity.id)
+                    return
+
+                if SUBITEM == True:
+                    if ModelSubItem.get_item_count(entity.entity_id) == 1:
+                        metadata_id = ScmUtil.get_program_metadata_id(metadata_id)
+                        sfentity = None
+                        sfentity = ModelSubFolderItem.get_by_folder_id(entity.parent_folder_id)
+                        if sfentity != None:
+                            logger.debug('[CALLBACK] REMOVE subfolder({})'.format(sfentity.name))
+                            if LibGdrive.is_folder_empty(sfentity.folder_id) == True:
+                                ret = LibGdrive.delete_file(sfentity.folder_id)
+                                if ret['ret'] == 'success': sfentity.delete(sfentity.id)
+                            else:
+                                logger.info('[CALLBACK] folder is not empty({})'.format(sfentity.folder_id))
+
+                url = base_url.format(s=server, m=metadata_id, t=token)
+                logger.debug('[CALLBACK] remove request {},{},{}'.format(entity.name, metadata_id,token))
+                #logger.debug('url:{}'.format(url))
                 headers = { "Accept": 'application/json',
                         "Accept-Encoding": 'gzip, deflate, br',
                         "Accept-Language": 'ko',
@@ -798,10 +897,12 @@ class LogicBase(LogicModuleBase):
 
                 if res.status_code != 200:
                     logger.error('[CALLBACK] REMOVE-failed to delete metadata(%s,%s)', entity.metadata_id, filename)
-                    if EPI and action == 'REMOVEEPISODE': entity.delete(entity.id)
+                    if SUBITEM and action == 'REMOVESUBITEM': entity.delete(entity.id)
                     return;
 
-                if EPI and action == 'REMOVEEPISODE': entity.delete(entity.id)
+                if SUBITEM and action == 'REMOVESUBITEM':
+                    entity.delete(entity.id)
+                    if sfentity != None: ScmUtil.check_subfolder(entity_id=sfentity.id)
                 else:
                     entity.plex_path = u''
                     entity.gdrive_path = u''
@@ -830,7 +931,7 @@ class LogicBase(LogicModuleBase):
                 if 'file_id' in req:
                     if module_name.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
                     else: entity = ModelTvMvItem.get_by_id(db_id)
-                    ret = LogicBase.create_episode_shortcut(entity, req['file_id'])
+                    ret = LogicBase.create_subitem_shortcut(entity, req['file_id'])
                 else: ret = LogicBase.create_shortcut(module_name, db_id)
                 if ret['ret'] == 'success': data = {'type':'success', 'msg':ret['msg']}
                 else: data = {'type':'warning', 'msg':ret['msg']}
@@ -862,9 +963,9 @@ class LogicBase(LogicModuleBase):
                     if ret['ret'] != 'success':
                         data = {'type':'warning', 'msg':'바로가기 삭제실패{m}:{id}'.format(m=module_name, id=item_id)}
                         socketio.emit('notify', data, namespace='/framework', broadcast=True)
-                elif target == 'episode_shortcut':
+                elif target == 'subitem_shortcut':
                     shortcut_id = req['shortcut_id']
-                    ret = LogicBase.remove_episode_shortcut(module_name, item_id, shortcut_id)
+                    ret = LogicBase.remove_subitem_shortcut(module_name, item_id, shortcut_id)
                     if ret['ret'] != 'success':
                         data = {'type':'warning', 'msg':'바로가기 삭제실패{m}:{id}'.format(m=module_name, id=item_id)}
                         socketio.emit('notify', data, namespace='/framework', broadcast=True)
@@ -897,36 +998,58 @@ class LogicBase(LogicModuleBase):
                 LogicBase.RemoveJobQueue.task_done()
 
     @staticmethod
-    def create_episode_shortcut(entity, file_id):
+    def create_subitem_shortcut(entity, file_id):
         try:
             ret = LibGdrive.get_file_info(file_id)
-            if ret['ret'] != 'success':
+            if ret['ret'] != 'success' or (ret['ret'] == 'success' and ret['data']['trashed'] == True):
                 return {'ret':'error', 'msg':'파일정보 획득실패({})'.format(file_id)}
 
             # 원본파일 정보
             orig = ret['data']
-            logger.debug('[create_episode_shortcut] {},{},{}'.format(orig['name'],orig['mimeType'],orig['id']))
+            logger.debug('[create_subitem_shortcut] {},{},{}'.format(orig['name'],orig['mimeType'],orig['id']))
+            sub_type = 'season' if orig['mimeType'] == 'application/vnd.google-apps.folder' else 'episode'
 
-            # 에피소드감상용 경로에 폴더 생성
-            base_path = ModelSetting.get('ktv_episode_base_path')
-            gdrive_path = ScmUtil.get_gdrive_path(base_path)
-            dir_name = ScmUtil.get_shortcut_name(entity)
+            if entity.agent_type == 'ktv':
+                # 에피소드감상용 경로에 폴더 생성
+                base_path = ModelSetting.get('ktv_subitem_base_path')
+                gdrive_path = ScmUtil.get_gdrive_path(base_path)
+                dir_name = ScmUtil.get_shortcut_name(entity)
 
-            if LogicBase.KtvEpisodeBasePath == None or LogicBase.KtvEpisodeBasePath != base_path:
-                LogicBase.KtvEpisodeBasePath = base_path
-                base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
-                if base_folder_id == None:
-                    return {'ret':'error', 'msg':'에피소드폴더정보 획득실패({})'.format(gdrive_path)}
-                ModelSetting.set('ktv_episode_base_folder_id', base_folder_id)
-                LogicBase.KtvEpisodeBaseFolderId = base_folder_id
-            else:
-                base_folder_id = ModelSetting.get('ktv_episode_base_folder_id')
-                if base_folder_id == u'':
+                if LogicBase.KtvSubitemBasePath == None or LogicBase.KtvSubitemBasePath != base_path:
+                    LogicBase.KtvSubitemBasePath = base_path
                     base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
                     if base_folder_id == None:
                         return {'ret':'error', 'msg':'에피소드폴더정보 획득실패({})'.format(gdrive_path)}
-                    ModelSetting.set('ktv_episode_base_folder_id', base_folder_id)
-                    LogicBase.KtvEpisodeBaseFolderId = base_folder_id
+                    ModelSetting.set('ktv_subitem_base_folder_id', base_folder_id)
+                    LogicBase.KtvSubitemBaseFolderId = base_folder_id
+                else:
+                    base_folder_id = ModelSetting.get('ktv_subitem_base_folder_id')
+                    if base_folder_id == u'':
+                        base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
+                        if base_folder_id == None:
+                            return {'ret':'error', 'msg':'에피소드폴더정보 획득실패({})'.format(gdrive_path)}
+                        ModelSetting.set('ktv_subitem_base_folder_id', base_folder_id)
+                        LogicBase.KtvSubitemBaseFolderId = base_folder_id
+            else: # ftv
+                base_path = ModelSetting.get('ftv_subitem_base_path')
+                gdrive_path = ScmUtil.get_gdrive_path(base_path)
+                dir_name = ScmUtil.get_shortcut_name(entity)
+
+                if LogicBase.FtvSubitemBasePath == None or LogicBase.FtvSubitemBasePath != base_path:
+                    LogicBase.FtvSubitemBasePath = base_path
+                    base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
+                    if base_folder_id == None:
+                        return {'ret':'error', 'msg':'시즌폴더정보 획득실패({})'.format(gdrive_path)}
+                    ModelSetting.set('ftv_subitem_base_folder_id', base_folder_id)
+                    LogicBase.FtvSubitemBaseFolderId = base_folder_id
+                else:
+                    base_folder_id = ModelSetting.get('ftv_subitem_base_folder_id')
+                    if base_folder_id == u'':
+                        base_folder_id = LibGdrive.get_folder_id_by_path(gdrive_path)
+                        if base_folder_id == None:
+                            return {'ret':'error', 'msg':'시즌폴더정보 획득실패({})'.format(gdrive_path)}
+                        ModelSetting.set('ktv_subitem_base_folder_id', base_folder_id)
+                        LogicBase.FtvSubitemBaseFolderId = base_folder_id
 
             sfentity = None
             sfentity = ModelSubFolderItem.get_by_rule_name_parent(-1, dir_name, base_folder_id)
@@ -943,7 +1066,7 @@ class LogicBase(LogicModuleBase):
             shortcut_name = orig['name']
             ret = LibGdrive.create_shortcut(shortcut_name, file_id, sfentity.folder_id)
             if ret['ret'] != 'success':
-                logger.error('failed to create episode shortcut')
+                logger.error('failed to create subitem shortcut')
                 return { 'ret':'error', 'msg':'생성실패! 로그를 확인해주세요.' }
 
             shortcut = ret['data']
@@ -951,21 +1074,29 @@ class LogicBase(LogicModuleBase):
             full_path = os.path.join(gdrive_path, dir_name, shortcut_name)
             plex_path = ScmUtil.get_plex_path(full_path)
 
-            # episode entity create
-            episode = ModelEpisodeItem(shortcut_name, entity.id, entity.agent_type)
-            episode.target_file_id = file_id
-            episode.shortcut_file_id = py_unicode(shortcut['id'])
-            episode.parent_folder_id = sfentity.folder_id
-            episode.plex_path = plex_path
-            episode.save()
+            logger.debug(u'바로가기 생성완료(%s)', plex_path)
+            ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}'.format(n=shortcut_name)}
 
-            logger.debug(u'바로가기 생성완료(%s)', episode.shortcut_file_id)
-            ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}'.format(n=episode.name) }
+            # subitem entity create
+            subitem = ModelSubItem(shortcut_name, entity.id, entity.agent_type, sub_type)
+            subitem.target_file_id = file_id
+            subitem.shortcut_file_id = py_unicode(shortcut['id'])
+            subitem.parent_folder_id = sfentity.folder_id
+            subitem.plex_path = plex_path
+            subitem.save()
+
+            if sub_type == 'episode':
+                subexts = ModelSetting.get_list('except_subitem_exts','|')
+                #logger.debug(subexts)
+                name, ext = os.path.splitext(shortcut_name)
+                if ext in subexts:
+                    logger.debug(u'예외확장자: 스캔명령을 전송하지 않음({})'.format(shortcut_name))
+                    return ret
 
             rule = ModelRuleItem.get_by_id(entity.rule_id)
             if rule.use_plex:
-                LogicBase.PlexScannerQueue.put({'id':episode.id, 'agent_type':episode.agent_type, 'path':episode.plex_path, 'action':'ADDEPISODE', 'now':datetime.now()})
-                ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}, 스캔명령 전송대기'.format(n=episode.name) }
+                LogicBase.PlexScannerQueue.put({'id':subitem.id, 'agent_type':subitem.agent_type, 'path':subitem.plex_path, 'action':'ADDSUBITEM', 'now':datetime.now()})
+                ret = { 'ret':'success', 'msg':'바로가기 생성 성공{n}, 스캔명령 전송대기'.format(n=subitem.name) }
             return ret
 
         except Exception as e:
@@ -1113,7 +1244,7 @@ class LogicBase(LogicModuleBase):
             if ModelSetting.get_bool('use_trash'):
                 trash_folder_id = ModelSetting.get('trash_folder_id')
                 finfo = LibGdrive.get_file_info(trash_folder_id)
-                if finfo['ret'] != 'success':
+                if finfo['ret'] != 'success' or (finfo['ret'] == 'success' and finfo['data']['trashed'] == True):
                     return { 'ret':'error', 'msg':'삭제실패! 휴지통 폴더ID를 확인해주세요.' }
 
                 ret = LibGdrive.move_file(entity.shortcut_folder_id, entity.target_folder_id, ModelSetting.get('trash_folder_id'))
@@ -1145,21 +1276,21 @@ class LogicBase(LogicModuleBase):
 
 
     @staticmethod
-    def remove_episode_shortcut(module_name, db_id, shortcut_id):
+    def remove_subitem_shortcut(module_name, db_id, shortcut_id):
         try:
             if module_name == 'av': entity = ModelAvItem.get_by_id(db_id)
             else: entity = ModelTvMvItem.get_by_id(db_id)
 
-            episode = ModelEpisodeItem.get_by_shortcut_file_id(shortcut_id)
-            logger.debug('remove_shortcut: name(%s)', episode.name)
+            subitem = ModelSubItem.get_by_shortcut_file_id(shortcut_id)
+            logger.debug('remove_shortcut: name(%s)', subitem.name)
 
             if ModelSetting.get_bool('use_trash'):
                 trash_folder_id = ModelSetting.get('trash_folder_id')
                 finfo = LibGdrive.get_file_info(trash_folder_id)
-                if finfo['ret'] != 'success':
+                if finfo['ret'] != 'success' or (finfo['ret'] == 'success' and finfo['data']['trashed'] == True):
                     return { 'ret':'error', 'msg':'삭제실패! 휴지통 폴더ID를 확인해주세요.' }
 
-                ret = LibGdrive.move_file(shortcut_id, episode.parent_folder_id, ModelSetting.get('trash_folder_id'))
+                ret = LibGdrive.move_file(shortcut_id, subitem.parent_folder_id, ModelSetting.get('trash_folder_id'))
             else:
                 ret = LibGdrive.delete_file(shortcut_id)
 
@@ -1169,9 +1300,17 @@ class LogicBase(LogicModuleBase):
             logger.debug(u'바로가기 삭제완료(%s)', shortcut_id)
             ret = { 'ret':'success', 'msg':'바로가기 삭제완료{n}'.format(n=entity.title) }
 
+            if subitem.sub_type == 'episode':
+                subexts = ModelSetting.get_list('except_subitem_exts','|')
+                name, ext = os.path.splitext(subitem.name)
+                logger.debug(u'예외확장자: 스캔명령을 전송하지 않음({})'.format(subitem.name))
+                if ext in subexts:
+                    subitem.delete(subitem.id)
+                    return ret
+
             rule = ModelRuleItem.get_by_id(entity.rule_id)
             if rule.use_plex:
-                LogicBase.PlexScannerQueue.put({'id':episode.id, 'agent_type':episode.agent_type, 'path':episode.plex_path, 'action':'REMOVEEPISODE', 'now':datetime.now()})
+                LogicBase.PlexScannerQueue.put({'id':subitem.id, 'agent_type':subitem.agent_type, 'path':subitem.plex_path, 'action':'REMOVESUBITEM', 'now':datetime.now()})
                 ret = { 'ret':'success', 'msg':'바로가기 삭제 성공{n}, 스캔명령 전송대기'.format(n=entity.name) }
             return ret
 

@@ -400,8 +400,8 @@ class ModelTvMvItem(db.Model):
 
         if status_option == 'excluded':
             query = query.filter(cls.excluded == True)
-        elif status_option == 'episode':
-            episodes = ModelEpisodeItem.get_all_entities_group_by_entity_id()
+        elif status_option == 'subitem':
+            episodes = ModelSubItem.get_all_entities_group_by_entity_id()
             entity_ids = list(set([x.entity_id for x in episodes]))
             query = query.filter(cls.id.in_(entity_ids))
         else:
@@ -617,7 +617,7 @@ class ModelAvItem(db.Model):
                     if tt != '':
                         query = query.filter(cls.title.like('%'+tt.strip()+'%'))
             else:
-                query = query.filter(or_(cls.title.like('%'+search+'%'), cls.name.like('%'+search+'%')))
+                query = query.filter(or_(cls.title.like('%'+search+'%'), cls.name.like('%'+search+'%'), cls.actor.like('%'+search+'%')))
 
         if rule_name != 'all':
             query = query.filter(cls.rule_name == rule_name)
@@ -706,8 +706,8 @@ class ModelSubFolderItem(db.Model):
 
 
 
-class ModelEpisodeItem(db.Model):
-    __tablename__ = '%s_episode_item' % package_name
+class ModelSubItem(db.Model):
+    __tablename__ = '%s_sub_item' % package_name
     __table_args__ = {'mysql_collate': 'utf8_general_ci'}
     __bind_key__ = package_name
 
@@ -718,6 +718,7 @@ class ModelEpisodeItem(db.Model):
     # basic info
     name = db.Column(db.String)
     entity_id = db.Column(db.Integer)
+    sub_type = db.Column(db.String)
     agent_type = db.Column(db.String)
     target_file_id = db.Column(db.String)
     shortcut_file_id = db.Column(db.String)
@@ -728,10 +729,11 @@ class ModelEpisodeItem(db.Model):
     plex_section_id = db.Column(db.String)
     plex_metadata_id = db.Column(db.String)
 
-    def __init__(self, name, entity_id, agent_type):
+    def __init__(self, name, entity_id, agent_type, sub_type):
         self.created_time = datetime.now()
         self.name = py_unicode(name)
         self.entity_id = entity_id
+        self.sub_type = sub_type
         self.agent_type = py_unicode(agent_type)
 
     def __repr__(self):

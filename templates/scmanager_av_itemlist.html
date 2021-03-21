@@ -478,7 +478,15 @@ function get_children_info(id) {
         var str = '';
 	for (k in data.list) {
           str += m_row_start();
-          str += m_col(2, data.list[k].mimeType);
+	  if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+            str += m_col_tt(2, '폴더', tooltip=data.list[k].mimeType, pos='down-left');
+	  } else if (data.list[k].mimeType.startsWith('video/')) {
+            str += m_col_tt(2, '영상', tooltip=data.list[k].mimeType, pos='down-left');
+	  } else if (data.list[k].mimeType.startsWith('text/')) {
+            str += m_col_tt(2, '자막', tooltip=data.list[k].mimeType, pos='down-left');
+	  } else {
+            str += m_col_tt(2, '기타', tooltip=data.list[k].mimeType, pos='down-left');
+	  }
           tmp = data.list[k].name + '<br>';
           if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
             tmp += '<a href="https://drive.google.com/drive/folders/' +data.list[k].id+ '" target="_blank">';
@@ -487,8 +495,12 @@ function get_children_info(id) {
           }
           tmp += data.list[k].id+ '</a>';
           str += m_col(6, tmp);
-	  bytes = parseInt(data.list[k].size)
-          str += m_col(2, get_byte_str(bytes))
+	  if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+            str += m_col(2, '폴더');
+	  } else {
+	    bytes = parseInt(data.list[k].size);
+            str += m_col(2, get_byte_str(bytes));
+	  }
           str += m_row_end();
           if (k != data.list.length -1) {str += m_hr();}
         }

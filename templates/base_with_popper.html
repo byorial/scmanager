@@ -795,4 +795,8 @@ function m_button_dd(id, text, buttons, outline_color) {
   str += '</div></div>';
   return str;
 }
+
+function m_col_tt(col, text, tooltip='', pos='down', size='large') {
+  return '<div class="col-sm-'+col+'" style="text-align: left; word-break:break-all;" aria-label="'+tooltip+'" data-balloon-pos="'+pos+'" data-balloon-length="'+size+'">'+text+'</div>';
+}
 </script>

@@ -20,7 +20,7 @@ from tool_expand import ToolExpandFileProcess
 # GDrive Lib
 from lib_gdrive import LibGdrive
 from .logic_base import LogicBase
-from .models import ModelRuleItem, ModelTvMvItem, ModelEpisodeItem
+from .models import ModelRuleItem, ModelTvMvItem, ModelSubItem
 from .utils import ScmUtil
 
 # 패키지
@@ -58,7 +58,7 @@ class LogicTv(LogicModuleBase):
                 db_id = int(req.form['id'])
                 LogicBase.ShortcutJobQueue.put({'id':db_id, 'module_name':self.name})
                 ret = { 'ret':'success', 'msg':'바로가기 생성 요청 완료' }
-            elif sub == 'create_episode_shortcut':
+            elif sub == 'create_subitem_shortcut':
                 db_id = int(req.form['entity_id'])
                 file_id = req.form['file_id']
                 LogicBase.ShortcutJobQueue.put({'id':db_id, 'module_name':self.name, 'file_id':file_id})
@@ -67,10 +67,10 @@ class LogicTv(LogicModuleBase):
                 db_id = int(req.form['id'])
                 LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'shortcut'})
                 ret = { 'ret':'success', 'msg':'바로가기 삭제 요청 완료' }
-            elif sub == 'remove_episode_shortcut':
+            elif sub == 'remove_subitem_shortcut':
                 db_id = int(req.form['entity_id'])
                 shortcut_id = req.form['shortcut_id']
-                LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'episode_shortcut', 'shortcut_id':shortcut_id})
+                LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'subitem_shortcut', 'shortcut_id':shortcut_id})
                 ret = { 'ret':'success', 'msg':'바로가기 삭제 요청 완료' }
             elif sub == 'metadata_search':
                 agent_type = req.form['meta_agent_type']
