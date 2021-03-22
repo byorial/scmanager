@@ -7,21 +7,26 @@
     <div class="container-fluid">
       <div class="row show-grid" align="center">
         <span class="col-md-12" align="left">
-          <span class="col-md-4" style="align-items:left; text-align:left;">
+          <span class="col-md-6" style="align-items:left; text-align:left;">
             <select name='category'>
               <option value="all">전체경로</option>
+            </select>
+            <select name='order'>
+              <option value="code_desc" selected>품번역순</option>
+              <option value="code_asc">품번순</option>
             </select>
             <select name='status_option'>
               <option value="all">전체상태</option>
               <option value="true">숏컷생성</option>
               <option value="false">숏컨미생성</option>
+              <option value="duplicated">중복품번</option>
               <option value="excluded">제외목록</option>
             </select>
          </span>
-         <span class="col-md-4">
+         <span class="col-md-3">
 	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
 	 </span>
-         <span class="col-md-4">
+         <span class="col-md-3">
           {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋'], ['request_modal_btn', '요청']]) }}
          </span>
         </span>

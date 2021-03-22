@@ -586,13 +586,13 @@ class ModelAvItem(db.Model):
             job_id = ''
             search = ''
             category = ''
-            if 'page' in req.form:
-                page = int(req.form['page'])
-            if 'search_word' in req.form:
-                search = req.form['search_word']
+            order = ''
+            if 'page' in req.form: page = int(req.form['page'])
+            if 'search_word' in req.form: search = req.form['search_word']
+            if 'order' in req.form: order = req.form['order']
             rule_name = req.form['category'] if 'category' in req.form else 'all'
             status_option = req.form['status_option'] if 'status_option' in req.form else 'all'
-            query = cls.make_query(search=search, rule_name=rule_name, status_option=status_option)
+            query = cls.make_query(search=search, rule_name=rule_name, status_option=status_option, order=order)
             count = query.count()
             query = query.limit(page_size).offset((page-1)*page_size)
             logger.debug('cls count:%s', count)
@@ -630,14 +630,17 @@ class ModelAvItem(db.Model):
 
         if status_option == 'excluded':
             query = query.filter(cls.excluded == True)
+        elif status_option == 'duplicated':
+            subquery = db.session.query(cls.ui_code).group_by(cls.ui_code).having(func.count(cls.ui_code) > 1).subquery()
+            query = query.filter(cls.ui_code.in_(subquery))
         else:
             query = query.filter(cls.excluded == False)
             if status_option != 'all':
                 if status_option == 'true': query = query.filter(cls.shortcut_created == True)
                 else: query = query.filter(cls.shortcut_created == False)
 
-        if order == 'desc':
-            query = query.order_by(desc(cls.id))
+        if order == 'code_desc':
+            query = query.order_by(desc(cls.ui_code))
         else:
             query = query.order_by(desc(cls.id))
 
