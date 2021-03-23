@@ -639,10 +639,10 @@ class ModelAvItem(db.Model):
                 if status_option == 'true': query = query.filter(cls.shortcut_created == True)
                 else: query = query.filter(cls.shortcut_created == False)
 
-        if order == 'code_desc':
-            query = query.order_by(desc(cls.ui_code))
-        else:
-            query = query.order_by(desc(cls.id))
+        if order == 'id_desc': query = query.order_by(desc(cls.id))
+        elif order == 'id_asc': query = query.order_by(cls.id)
+        elif order == 'code_desc': query = query.order_by(desc(cls.ui_code))
+        else: query = query.order_by(cls.ui_code)
 
         return query 
 
