@@ -623,7 +623,7 @@ class ScmUtil(LogicModuleBase):
             metadata = agent_map[agent_type].search(title, year, manual=True)
             #logger.debug(json.dumps(metadata, indent=2))
         elif agent_type == 'avdvd' or agent_type == 'avama':
-            metadata = agent_map[agent_type].search(title, all_find=True, do_trans=True)
+            metadata = agent_map[agent_type].search(title, manual=True)
             #logger.debug(json.dumps(metadata, indent=2))
 
         if get_list:
