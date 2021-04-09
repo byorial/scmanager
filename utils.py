@@ -31,13 +31,6 @@ ModelSetting = P.ModelSetting
 #########################################################
 
 class ScmUtil(LogicModuleBase):
-    RuleHandlerThread = None
-    RuleJobQueue = None
-
-    PlexScannerThread = None
-    PlexScannerQueue = None
-
-
     # 경로규칙 관련
     @staticmethod
     def register_rule(req):
@@ -306,6 +299,7 @@ class ScmUtil(LogicModuleBase):
 
             entity.code = py_unicode(info['code'])
             if module_name != 'av': entity.status = info['status']
+            #else: entity.ui_code = info['ui_code']
             entity.site = py_unicode(info['site'])
             entity.poster_url = py_unicode(info['poster_url'])
             entity.studio = py_unicode(info['studio'])
@@ -735,6 +729,7 @@ class ScmUtil(LogicModuleBase):
         info['year'] = metadata['year'] if 'year' in metadata else 1900
         info['plot'] = py_unicode(metadata['plot']) if 'plot' in metadata else u''
         info['runtime'] = metadata['runtime'] if 'runtime' in metadata else 0
+        #info['ui_code'] = metadata['originaltitle'] if 'originaltitle' in metadata else u''
         return info
 
     @staticmethod

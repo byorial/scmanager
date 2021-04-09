@@ -256,8 +256,10 @@ class LogicBase(LogicModuleBase):
             else: entity = ModelTvMvItem.get_by_id(db_id)
             from system.logic_command import SystemLogicCommand
             if os.path.isfile(ModelSetting.get('rclone_bin_path')):
-                if agent_type == 'subitem': rc_path = ScmUtil.get_rc_path(os.path.dirname(entity.plex_path))
-                else: rc_path = ScmUtil.get_rc_path(entity.plex_path)
+                plex_path = entity.plex_path
+                if agent_type == 'subitem' and entity.sub_type == 'episode':
+                    plex_path = os.path.dirname(entity.plex_path)
+                rc_path = ScmUtil.get_rc_path(plex_path)
                 logger.debug('[send_plex_scan] rc vfs/refresh: %s', rc_path)
                 #command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path]
                 command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
@@ -692,7 +694,7 @@ class LogicBase(LogicModuleBase):
                 callback_id = '{}|{}|{}'.format(agent_type, str(item_id), action)
                 logger.debug('스캔명령 전송: server(%s), section_id(%s), callback(%s), path(%s)', server, section_id, callback_id, plex_path)
                 if action.endswith('SUBITEM'): LogicBase.refresh_plex_vfs('subitem', item_id)
-                if action == 'REFRESH' or action == 'ADDSUBITEM': action = 'ADD'
+                if action.startswith('REFRESH') or action.startswith('ADD'): action = 'ADD'
                 if action == 'REMOVESUBITEM': action = 'REMOVE'
                 plex.Logic.send_scan_command2(package_name, section_id, scan_path, callback_id, action, package_name)
                 LogicBase.PlexScannerQueue.task_done()
@@ -716,20 +718,21 @@ class LogicBase(LogicModuleBase):
             SUBITEM = False
 
             entity = None
-            if action == 'ADDSUBITEM' or action == 'REMOVESUBITEM':
+            if action.endswith('SUBITEM'):
                 entity = ModelSubItem.get_by_id(int(db_id))
                 SUBITEM = True
             else:
                 if agent_type.startswith('av'): entity = ModelAvItem.get_by_id(int(db_id))
                 else: entity = ModelTvMvItem.get_by_id(int(db_id))
 
-            if action == 'REFRESH':
-                entity.updated_time = datetime.now()
-                metadata = ScmUtil.info_metadata(entity.agent_type, entity.code, entity.title)
-                if metadata != None and 'status' in metadata and metadata['status'] == 2:
-                    logger.debug(u'[CALLBACK]: 방영상태가 변경되어 갱신(%s)', entity.title)
-                    entity.status = metadata['status']
-                entity.save()
+            if action.startswith('REFRESH'):
+                if not action.endswith('SUBITEM'): 
+                    entity.updated_time = datetime.now()
+                    metadata = ScmUtil.info_metadata(entity.agent_type, entity.code, entity.title)
+                    if metadata != None and 'status' in metadata and metadata['status'] == 2:
+                        logger.debug(u'[CALLBACK]: 방영상태가 변경되어 갱신(%s)', entity.title)
+                        entity.status = metadata['status']
+                    entity.save()
                 logger.debug('[CALLBACK]: REFRESH done')
                 return
 

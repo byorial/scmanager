@@ -235,6 +235,13 @@ $("body").on('click', '#shortcut_remove_subitem_btn', function(e){
   remove_subitem_shortcut(entity_id, file_id);
 });
 
+$("body").on('click', '#refresh_subitem_btn', function(e){
+  e.preventDefault();
+  entity_id = $(this).data('entity_id');
+  file_id = $(this).data('file_id');
+  refresh_subitem(entity_id, file_id);
+});
+
 $("body").on('click', '#shortcut_create_subitem_btn', function(e){
   e.preventDefault();
   entity_id = $(this).data('entity_id');
@@ -245,6 +252,23 @@ $("body").on('click', '#shortcut_create_subitem_btn', function(e){
 function remove_subitem_shortcut(entity_id, file_id) {
   $.ajax({
     url: '/' + package_name + '/ajax/'+sub+'/remove_subitem_shortcut',
+    type: "POST",
+    cache: false,
+    data: {'entity_id':entity_id, 'shortcut_id':file_id},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        $.notify('<strong>성공: '+data.msg+'</strong>', {type: 'success'});
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+}
+
+function refresh_subitem(entity_id, file_id) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/refresh_subitem',
     type: "POST",
     cache: false,
     data: {'entity_id':entity_id, 'shortcut_id':file_id},
@@ -369,7 +393,9 @@ function get_children_info(id) {
 	  if (data.list[k].in_plex == "False") {
 	    tmp = m_button_tt('shortcut_create_subitem_btn', 'Plex추가', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].id}], 'info', '해당에피소드를 Plex에 추가합니다', 'left', 'medium');
 	  } else if (data.list[k].in_plex == "True") {
-	    tmp = m_button_tt('shortcut_remove_subitem_btn', 'Plex삭제', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].shortcut_id}], 'danger', '해당에피소드를 Plex에서 삭제합니다.', 'left', 'medium');
+	    btn_str = m_button_tt('refresh_subitem_btn', '갱신', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].shortcut_id}], 'info', '해당아이템을 Plex에서 갱신합니다.', 'left', 'medium');
+	    btn_str += m_button_tt('shortcut_remove_subitem_btn', '삭제', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].shortcut_id}], 'danger', '해당에피소드를 Plex에서 삭제합니다.', 'right', 'medium');
+	    tmp = m_button_group(btn_str)
 	  } else {
 	    tmp = '<span align="center">-</span>';
 	  }

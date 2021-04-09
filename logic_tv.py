@@ -72,6 +72,12 @@ class LogicTv(LogicModuleBase):
                 shortcut_id = req.form['shortcut_id']
                 LogicBase.RemoveJobQueue.put({'id':db_id, 'module_name':self.name, 'target':'subitem_shortcut', 'shortcut_id':shortcut_id})
                 ret = { 'ret':'success', 'msg':'바로가기 삭제 요청 완료' }
+            elif sub == 'refresh_subitem':
+                db_id = int(req.form['entity_id'])
+                shortcut_id = req.form['shortcut_id']
+                subitem = ModelSubItem.get_by_shortcut_file_id(shortcut_id)
+                LogicBase.PlexScannerQueue.put({'id':subitem.id, 'agent_type':subitem.agent_type, 'path':subitem.plex_path, 'action':'REFRESHSUBITEM', 'now':datetime.now()})
+                ret = { 'ret':'success', 'msg':'갱신요청 완료완료' }
             elif sub == 'metadata_search':
                 agent_type = req.form['meta_agent_type']
                 title = req.form['meta_search_word']
