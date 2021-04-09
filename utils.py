@@ -292,9 +292,11 @@ class ScmUtil(LogicModuleBase):
             title = req.form['title']
             site = req.form['site']
 
-            info = ScmUtil.info_metadata(entity.agent_type, code, title)
+            agent_type = entity.agent_type
+            if module_name.endswith('tv'): agent_type = 'ktv' if code[0] == 'K' else 'ftv'
+            info = ScmUtil.info_metadata(agent_type, code, title)
             if info == None:
-                logger.error(u'메타정보 조회실패: %s:%s', entity.agent_type, title)
+                logger.error(u'메타정보 조회실패: %s:%s', agent_type, title)
                 return { 'ret':'error', 'msg':'"{}"의 메타정보 조회실패.'.format(title) }
 
             entity.code = py_unicode(info['code'])
