@@ -353,7 +353,7 @@ class ModelTvMvItem(db.Model):
             job_id = ''
             search = ''
             category = ''
-	    genre = 'all'
+            genre = 'all'
             if 'page' in req.form:
                 page = int(req.form['page'])
             if 'search_word' in req.form:
