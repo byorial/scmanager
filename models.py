@@ -358,7 +358,7 @@ class ModelTvMvItem(db.Model):
                 page = int(req.form['page'])
             if 'search_word' in req.form:
                 search = req.form['search_word']
-	    if 'genre' in req.form:
+            if 'genre' in req.form:
                 genre = req.form['genre']
             rule_name = req.form['category'] if 'category' in req.form else 'all'
             status_option = req.form['status_option'] if 'status_option' in req.form else 'all'
@@ -380,7 +380,7 @@ class ModelTvMvItem(db.Model):
         if module_name != '':
             if module_name == 'movie': query = query.filter(cls.agent_type == 'movie')
             else: query = query.filter(cls.agent_type.like('%tv'))
-	if genre != 'all': query = query.filter(cls.genre == genre)
+        if genre != 'all': query = query.filter(cls.genre == genre)
         if search is not None and search != '':
             if search.find('|') != -1:
                 tmp = search.split('|')
@@ -803,12 +803,12 @@ class ModelSubItem(db.Model):
             job_id = ''
             search = ''
             category = ''
-	    genre = 'all'
+            genre = 'all'
             if 'page' in req.form:
                 page = int(req.form['page'])
             if 'search_word' in req.form:
                 search = req.form['search_word']
-	    if 'genre' in req.form:
+            if 'genre' in req.form:
                 genre = req.form['genre']
             rule_name = req.form['category'] if 'category' in req.form else 'all'
             status_option = req.form['status_option'] if 'status_option' in req.form else 'all'
@@ -830,7 +830,7 @@ class ModelSubItem(db.Model):
         if module_name != '':
             if module_name == 'movie': query = query.filter(cls.agent_type == 'movie')
             else: query = query.filter(cls.agent_type.like('%tv'))
-	if genre != 'all': query = query.filter(cls.genre == genre)
+        if genre != 'all': query = query.filter(cls.genre == genre)
         if search is not None and search != '':
             if search.find('|') != -1:
                 tmp = search.split('|')
