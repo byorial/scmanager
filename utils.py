@@ -718,7 +718,7 @@ class ScmUtil(LogicModuleBase):
         if poster_url == u'': poster_url = metadata['thumb'][0]['value'] if 'thumb' in metadata else u''
         info['trailer_url'] = u''
         if 'extras' in metadata:
-	    try:
+            try:
                 for ex in metadata['extras']:
                     if ex['content_type'] == 'trailer':
                         info['trailer_url'] = py_unicode(ex['content_url'])
