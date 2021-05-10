@@ -9,7 +9,11 @@ import requests
 from flask import request, render_template, jsonify, redirect
 from sqlalchemy import or_, and_, func, not_, desc
 import random
-import guessit
+try:
+    import guessit
+except ImportError:
+    os.system("{} install guessit".format(app.config['config']['pip']))
+    import guessit
 
 # sjva 공용
 from framework import db, scheduler, path_data, socketio, SystemModelSetting, app, celery, py_unicode, py_urllib, py_queue
