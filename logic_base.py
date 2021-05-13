@@ -768,7 +768,7 @@ class LogicBase(LogicModuleBase):
                     sub_type = entity.sub_type if SUBITEM else None
                     metadata_id = ScmUtil.get_program_metadata_id(metadata_id, sub_type=sub_type)
 
-                logger.debug("[CALLBACK] ADD-sectiond_id: s, metadata_id: %s", section_id, metadata_id)
+                logger.debug("[CALLBACK] ADD-sectiond_id: %s, metadata_id: %s", section_id, metadata_id)
                 entity.plex_section_id = str(section_id)
                 entity.plex_metadata_id = str(metadata_id)
                 entity.save()
