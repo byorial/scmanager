@@ -698,6 +698,7 @@ class LogicBase(LogicModuleBase):
                 callback_id = '{}|{}|{}'.format(agent_type, str(item_id), action)
                 logger.debug('스캔명령 전송: server(%s), section_id(%s), callback(%s), path(%s)', server, section_id, callback_id, plex_path)
                 if action.endswith('SUBITEM'): LogicBase.refresh_plex_vfs('subitem', item_id)
+                if action.startswith('REMOVE'): LogicBase.refresh_plex_vfs(agent_type, item_id)
                 if action.startswith('REFRESH') or action.startswith('ADD'): action = 'ADD'
                 if action == 'REMOVESUBITEM': action = 'REMOVE'
                 plex.Logic.send_scan_command2(package_name, section_id, scan_path, callback_id, action, package_name)
