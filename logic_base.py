@@ -263,11 +263,11 @@ class LogicBase(LogicModuleBase):
                 if agent_type == 'subitem' and entity.sub_type == 'episode':
                     plex_path = os.path.dirname(entity.plex_path)
                 rc_path = ScmUtil.get_rc_path(plex_path)
-                logger.debug('[send_plex_scan] rc vfs/refresh: %s', rc_path)
+                logger.debug('[refresh_plex_vfs] rc vfs/refresh: %s', rc_path)
                 #command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path]
                 command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
                 ret = SystemLogicCommand.execute_command_return(command, format='json')
-                #logger.debug(ret)
+                logger.debug(ret)
                 if 'jobid' not in ret:
                     return {'ret':'failed', 'msg':u'마운트 경로 갱신이 실패하였습니다.(mount rc확인필요)'}
 
@@ -322,7 +322,8 @@ class LogicBase(LogicModuleBase):
                     if row[1] == 'sub_type':
                         alter_type = False
                         break
-                if alter_type:
+
+                if not alter_type:
                     conn.close()
                     return
 
