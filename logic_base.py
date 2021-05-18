@@ -252,7 +252,7 @@ class LogicBase(LogicModuleBase):
             return {'ret':'error', 'msg':'메타갱신 요청실패: 로그를 확인하세요.'}
 
     @staticmethod
-    def refresh_plex_vfs(agent_type, db_id):
+    def refresh_plex_vfs(agent_type, db_id, remove=False):
         try:
             if agent_type == 'subitem': entity = ModelSubItem.get_by_id(db_id)
             elif agent_type.startswith('av'): entity = ModelAvItem.get_by_id(db_id)
@@ -260,7 +260,7 @@ class LogicBase(LogicModuleBase):
             from system.logic_command import SystemLogicCommand
             if os.path.isfile(ModelSetting.get('rclone_bin_path')):
                 plex_path = entity.plex_path
-                if agent_type == 'subitem' and entity.sub_type == 'episode':
+                if (agent_type == 'subitem' and entity.sub_type == 'episode') or remove:
                     plex_path = os.path.dirname(entity.plex_path)
                 rc_path = ScmUtil.get_rc_path(plex_path)
                 logger.debug('[refresh_plex_vfs] rc vfs/refresh: %s', rc_path)
@@ -698,7 +698,7 @@ class LogicBase(LogicModuleBase):
                 callback_id = '{}|{}|{}'.format(agent_type, str(item_id), action)
                 logger.debug('스캔명령 전송: server(%s), section_id(%s), callback(%s), path(%s)', server, section_id, callback_id, plex_path)
                 if action.endswith('SUBITEM'): LogicBase.refresh_plex_vfs('subitem', item_id)
-                if action.startswith('REMOVE'): LogicBase.refresh_plex_vfs(agent_type, item_id)
+                if action.startswith('REMOVE'): LogicBase.refresh_plex_vfs(agent_type, item_id, remove=True)
                 if action.startswith('REFRESH') or action.startswith('ADD'): action = 'ADD'
                 if action == 'REMOVESUBITEM': action = 'REMOVE'
                 plex.Logic.send_scan_command2(package_name, section_id, scan_path, callback_id, action, package_name)
