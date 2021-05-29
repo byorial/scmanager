@@ -24,12 +24,16 @@
     <script src="{{ url_for('static', filename='js/bootstrap-notify.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/custom10.js') }}"></script>
     <script src="{{ url_for('static', filename='js/sjva_ui13.js') }}"></script>
+    <link rel="stylesheet" href="https://cdn.plyr.io/3.6.8/plyr.css" />
+    <script src="https://cdn.plyr.io/3.6.8/plyr.js"></script>
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.6/socket.io.js"></script>
     <!-- 토글 -->
     <link href="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.4.0/css/bootstrap4-toggle.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/gh/gitbrent/bootstrap4-toggle@3.4.0/js/bootstrap4-toggle.min.js"></script>
-
+    <!-- video.js -->
+    <link href="//vjs.zencdn.net/7.10.2/video-js.min.css" rel="stylesheet">
+    <script src="//vjs.zencdn.net/7.10.2/video.min.js"></script>
 
     <!-- end 토글 -->
     
@@ -151,9 +155,14 @@
       </div>
     {{ macros.m_modal_end() }}
     <!--command modal end-->
+
+    <!--videoplay modal-->
+    {{ macros.m_modal_start('playvideo_modal', '영상재생', 'modal-lg') }}
+      <div id="playvideo_div"></div>
+    {{ macros.m_modal_end() }}
+    <!--videoplay modal end-->
     <!-- Modal end -->
 
-    
     {{ menu() }}
     
     <!--<nav class="navbar " role="navigation"> width가 메뉴만큼-->
@@ -799,4 +808,28 @@ function m_button_dd(id, text, buttons, outline_color) {
 function m_col_tt(col, text, tooltip='', pos='down', size='large') {
   return '<div class="col-sm-'+col+'" style="text-align: left; word-break:break-all;" aria-label="'+tooltip+'" data-balloon-pos="'+pos+'" data-balloon-length="'+size+'">'+text+'</div>';
 }
+
+$("body").on('click', '#play_video_btn', function(e) {
+  e.preventDefault();
+  fileid = $(this).data('fileid');
+  $.ajax({
+    url: '/' + package_name + '/ajax/scmbase/playvideo',
+    type: "POST", 
+    cache: false,
+    data:{fileid:fileid},
+    dataType: "json",
+    success: function (data) {
+      $("#children_info_modal").modal('hide');
+      str = '<video controls autostart="true" playsinline id="myVideo">';
+      str += '<source type="video/mp4" src="'+data.video_url+'" width="720px"/>';
+      str += '</video>'
+      document.getElementById("playvideo_div").innerHTML = str;
+      player = new Plyr(document.getElementById('myVideo'));
+      $("#playvideo_modal").modal();
+      player.play();
+    }
+  });
+});
+
+
 </script>

@@ -10,7 +10,7 @@ from flask import request, render_template, jsonify, redirect
 from sqlalchemy import or_, and_, func, not_, desc
 import random
 # sjva 공용
-from framework import db, scheduler, path_data, socketio, SystemModelSetting, app, celery, py_unicode, py_urllib, py_queue
+from framework import db, scheduler, path_app_root, path_data, socketio, SystemModelSetting, app, celery, py_unicode, py_urllib, py_queue
 from framework.util import Util
 from framework.common.util import headers, get_json_with_auth_session
 from framework.common.plugin import LogicModuleBase, default_route_socketio
@@ -93,6 +93,10 @@ class LogicBase(LogicModuleBase):
 
         # for avama
         'avama_shortcut_name_rule': u'{ui_code}',
+
+        # for directplay
+        'default_remote': u'gdrive',
+        'default_chunk' : '1048756',
     }
 
     RuleHandlerThread = None
@@ -217,6 +221,12 @@ class LogicBase(LogicModuleBase):
                 action = req.form['action']
                 if action == 'subfolder': ret = ScmUtil.check_subfolder()
                 else: ret = ScmUtil.check_subitem()
+            elif sub == 'playvideo':
+                ret = {}
+                ddns = SystemModelSetting.get('ddns')
+                fileid = req.form['fileid']
+                ret['video_url'] = f'{ddns}/{package_name}/api/get?id={fileid}'
+                ret['ret'] = 'success'
             return jsonify(ret)
 
         except Exception as e: 
@@ -352,10 +362,16 @@ class LogicBase(LogicModuleBase):
             creds_dir = os.path.dirname(ModelSetting.get('gdrive_creds_path'))
             if not os.path.isdir(creds_dir): os.makedirs(creds_dir)
 
-            popper_path = os.path.join(path_data, 'templates', 'base_with_popper.html')
-            if os.path.isfile(popper_path) != True:
-                opath = os.path.join(path_data, package_name, 'templates', 'base_with_popper.html')
-                if os.path.isfile(opath): shutil.copy(opath, popper_path)
+            from filecmp import cmp
+            temp = os.path.join(path_app_root, 'templates', 'base_with_popper.html')
+            local = os.path.join(os.path.dirname(__file__), 'templates', 'base_with_popper.html')
+            logger.debug(local)
+            if not os.path.exists(temp):
+                logger.debug('N:copy base_with_popper.html to {t}'.format(t=os.path.dirname(temp)))
+                shutil.copy(local, os.path.dirname(temp))
+            elif not cmp(temp, local):
+                logger.debug('E:copy base_with_popper.html to {t}'.format(t=os.path.dirname(temp)))
+                shutil.copy(local, temp)
 
             ret = LibGdrive.sa_authorize(json_path)
             if ret == True: ModelSetting.set('gdrive_sa_auth', 'True')
@@ -1346,5 +1362,4 @@ class LogicBase(LogicModuleBase):
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
-
 
