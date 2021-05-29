@@ -94,6 +94,8 @@
     {{ macros.m_tab_content_end() }}
    {% endif %}
    {{ macros.m_tab_content_start('etc', false) }}
+    {{ macros.setting_input_text('default_remote', '직접재생 기본리모트명', value=arg['default_remote'], desc=['직접재생시 인증을위한 기본 remote이름, rclone.conf 기준']) }}
+    {{ macros.setting_input_int('default_chunk', '스트리밍 Chunk사이즈', value=arg['default_chunk'], desc=['스트리밍처리를 위한 기본 Chunk사이즈, Byte단위']) }}
    {{ macros.setting_button([['check_subfolder_btn','하위경로검사'], ['check_subitem_btn','시즌/에피소드아이템 검사']], left='경로검사', desc='생성된 하위경로, 에피소드/시즌 아이템들을 검사하여 드라이브에서 삭제된 경우 삭제처리') }}
     <!-- {{ macros.setting_input_text_and_buttons('request_msg', '자료요청', [['request_msg_btn', '전송']],value='', placeholder='작품명 or 메시지(누락에피소드 등)', desc=['자료요청, 누락에피스드 요청', '작품 명이나 내용 입력후 전송', 'ID: scmanager_request']) }}
    {{ macros.setting_button([['refresh_all_rule_btn','경로규칙갱신'],['reset_all_rule_btn','경로규칙삭제']], left='경로규칙', desc='') }} -->

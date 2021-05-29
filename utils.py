@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 # third-party
 import requests
 # third-party
-from flask import request, render_template, jsonify, redirect
+from flask import request, render_template, jsonify, redirect, Response
 from sqlalchemy import or_, and_, func, not_, desc
 import random
 
@@ -1111,4 +1111,74 @@ class ScmUtil(LogicModuleBase):
             logger.debug(traceback.format_exc())
             return {'ret':'error', 'msg':u'시즌/에피소드 아이템 정리 실패.'}
 
+    @staticmethod
+    def get_remote_by_name(remote_name):
+        try:
+            from rclone.logic import Logic as LogicRclone
+            remotes = LogicRclone.load_remotes()
+            for remote in remotes:
+                if remote['name'] == remote_name:
+                    return remote
+            return None
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return None
 
+    def get_headers(headers, kind, token):
+        try:
+            chunk = ModelSetting.get('default_chunk')
+            if kind == "video":
+                if 'Range' not in headers or headers['Range'].startswith('bytes=0-'):
+                    headers['Range'] = f"bytes=0-{chunk}"
+            else:
+                if 'Range' in headers: del(headers['Range'])
+            headers['Authorization'] = f"Bearer {token}"
+            headers['Connection'] = 'keep-alive'
+            del(headers['Host'])
+            del(headers['X-Forwarded-Scheme'])
+            del(headers['X-Forwarded-Proto'])
+            del(headers['X-Forwarded-For'])
+            if 'Cookie' in headers: del(headers['Cookie'])
+            return headers
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return None
+
+    @staticmethod
+    def get_handler(request):
+        try:
+            base_url = 'https://www.googleapis.com/drive/v3/files/{fileid}?alt=media'
+
+            fileid = request.args.get('id', None)
+            remote_name = request.args.get('r', ModelSetting.get('default_remote'))
+            kind = request.args.get('k', 'video')
+            name = request.args.get('n', None)
+            logger.debug(f'{fileid},{remote_name},{kind},{name}')
+
+            remote = ScmUtil.get_remote_by_name(remote_name)
+            if remote == None:
+                logger.error(f'failed to get remote({remote_name})')
+                # TODO
+                return (401)
+
+            token = json.loads(remote['token'])['access_token']
+            headers = ScmUtil.get_headers(dict(request.headers), kind, token)
+            # TODO:에러처리 
+
+            url = base_url.format(fileid=fileid)
+            r = requests.get(url, headers=headers, stream=True)
+            # reponse header reset
+            if name != None and name.endswith('.srt'):
+                r.headers['Content-Type'] = 'text/plain'
+                r.headers['Content-Disposition'] = f'inline; filename="{name}"'
+
+            chunk = ModelSetting.get_int('default_chunk')
+            rv = Response(r.iter_content(chunk_size=chunk), r.status_code, content_type=r.headers['Content-Type'], direct_passthrough=True)
+            rv.headers.add('Content-Range', r.headers.get('Content-Range'))
+            return rv
+
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())

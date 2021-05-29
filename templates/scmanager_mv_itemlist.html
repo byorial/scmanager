@@ -77,9 +77,10 @@
   <div>
     {{ macros.m_hr_head_top() }}
     {{ macros.m_row_start('0') }}
-    {{ macros.m_col(2, macros.m_strong('유형')) }}
-    {{ macros.m_col(6, macros.m_strong('파일명/ID')) }}
+    {{ macros.m_col(1, macros.m_strong('유형')) }}
+    {{ macros.m_col(5, macros.m_strong('파일명/ID')) }}
     {{ macros.m_col(2, macros.m_strong('사이즈')) }}
+    {{ macros.m_col(2, macros.m_strong('재생')) }}
     {{ macros.m_row_end() }}
     {{ macros.m_hr_head_bottom() }}
     <div id="children_info_list"></div>
@@ -276,13 +277,13 @@ function get_children_info(id) {
 	for (k in data.list) {
           str += m_row_start();
 	  if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
-            str += m_col_tt(2, '폴더', tooltip=data.list[k].mimeType, pos='down-left');
+            str += m_col_tt(1, '폴더', tooltip=data.list[k].mimeType, pos='down-left');
 	  } else if (data.list[k].mimeType.startsWith('video/')) {
-            str += m_col_tt(2, '영상', tooltip=data.list[k].mimeType, pos='down-left');
+            str += m_col_tt(1, '영상', tooltip=data.list[k].mimeType, pos='down-left');
 	  } else if (data.list[k].mimeType.startsWith('text/')) {
-            str += m_col_tt(2, '자막', tooltip=data.list[k].mimeType, pos='down-left');
+            str += m_col_tt(1, '자막', tooltip=data.list[k].mimeType, pos='down-left');
 	  } else {
-            str += m_col_tt(2, '기타', tooltip=data.list[k].mimeType, pos='down-left');
+            str += m_col_tt(1, '기타', tooltip=data.list[k].mimeType, pos='down-left');
 	  }
           tmp = data.list[k].name + '<br>';
           if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
@@ -298,6 +299,11 @@ function get_children_info(id) {
 	    bytes = parseInt(data.list[k].size);
             str += m_col(2, get_byte_str(bytes));
 	  }
+          if (data.list[k].mimeType.startsWith('video/')) {
+	    str += m_col(2, m_button('play_video_btn', 'Play', [{'key':'fileid', 'value':data.list[k].id}]));
+          } else {
+            str += '-'
+          }
           str += m_row_end();
           if (k != data.list.length -1) {str += m_hr();}
         }

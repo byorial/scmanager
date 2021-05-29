@@ -6,7 +6,7 @@ import traceback
 
 # third-party
 import requests
-from flask import Blueprint, request, send_file, redirect
+from flask import Blueprint, request, send_file, redirect, render_template
 
 # sjva 공용
 from framework import app, path_data, check_api, py_urllib, SystemModelSetting
@@ -128,14 +128,18 @@ def initialize():
         P.logger.error(traceback.format_exc())
 
 @P.blueprint.route('/api/<sub>', methods=['GET', 'POST'])                                                                         
-def baseapi(sub):                                                                                                                 
+def baseapi(sub):
     P.logger.debug('API: %s', sub)
     try:
         from .logic_base import LogicBase
+        P.logger.debug(request.form)
         if sub == 'scan_completed':
-            P.logger.debug(request.form)
             LogicBase.callback_handler(request.form)
-        return 'ok'
+            return 'ok'
+        elif sub == 'get':
+            from .utils import ScmUtil
+            return ScmUtil.get_handler(request)
+
     except Exception as e: 
         P.logger.error('Exception:%s', e)
         P.logger.error(traceback.format_exc())
