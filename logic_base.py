@@ -16,6 +16,7 @@ from framework.common.util import headers, get_json_with_auth_session
 from framework.common.plugin import LogicModuleBase, default_route_socketio
 from framework.job import Job
 from tool_expand import ToolExpandFileProcess
+from tool_base import ToolUtil
 try:
     import guessit
 except ImportError:
