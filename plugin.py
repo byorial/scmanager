@@ -136,9 +136,9 @@ def baseapi(sub):
         if sub == 'scan_completed':
             LogicBase.callback_handler(request.form)
             return 'ok'
-        elif sub == 'get':
+        elif sub == 'proxy':
             from .utils import ScmUtil
-            return ScmUtil.get_handler(request)
+            return ScmUtil.proxy_handler(request)
 
     except Exception as e: 
         P.logger.error('Exception:%s', e)

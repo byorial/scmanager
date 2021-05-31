@@ -1147,14 +1147,14 @@ class ScmUtil(LogicModuleBase):
             return None
 
     @staticmethod
-    def get_handler(request):
+    def proxy_handler(request):
         try:
             base_url = 'https://www.googleapis.com/drive/v3/files/{fileid}?alt=media'
 
-            fileid = request.args.get('id', None)
-            remote_name = request.args.get('r', ModelSetting.get('default_remote'))
-            kind = request.args.get('k', 'video')
-            name = request.args.get('n', None)
+            fileid = request.args.get('fileid', None)
+            remote_name = request.args.get('remote', ModelSetting.get('default_remote'))
+            kind = request.args.get('kind', 'video')
+            name = request.args.get('name', None)
             logger.debug(f'{fileid},{remote_name},{kind},{name}')
 
             remote = ScmUtil.get_remote_by_name(remote_name)

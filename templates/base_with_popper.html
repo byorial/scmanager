@@ -812,24 +812,15 @@ function m_col_tt(col, text, tooltip='', pos='down', size='large') {
 $("body").on('click', '#play_video_btn', function(e) {
   e.preventDefault();
   fileid = $(this).data('fileid');
-  $.ajax({
-    url: '/' + package_name + '/ajax/scmbase/playvideo',
-    type: "POST", 
-    cache: false,
-    data:{fileid:fileid},
-    dataType: "json",
-    success: function (data) {
-      $("#children_info_modal").modal('hide');
-      str = '<video controls autostart="true" playsinline id="myVideo">';
-      str += '<source type="video/mp4" src="'+data.video_url+'" width="720px"/>';
-      str += '</video>'
-      document.getElementById("playvideo_div").innerHTML = str;
-      player = new Plyr(document.getElementById('myVideo'));
-      $("#playvideo_modal").modal();
-      player.play();
-    }
-  });
+  video_url = proxy_url + '&fileid='+fileid;
+  str = '<video controls autostart="true" playsinline id="myVideo">';
+  str += '<source type="video/mp4" src="'+video_url+'" width="720px"/>';
+  str += '</video>'
+  document.getElementById("playvideo_div").innerHTML = str;
+  $("#children_info_modal").modal('hide');
+  player = new Plyr(document.getElementById('myVideo'));
+  $("#playvideo_modal").modal();
+  player.play();
 });
-
 
 </script>

@@ -16,6 +16,7 @@ from framework.util import Util
 from framework.common.util import headers, get_json_with_auth_session
 from framework.common.plugin import LogicModuleBase, default_route_socketio
 from tool_expand import ToolExpandFileProcess
+from tool_base import ToolUtil
 
 # GDrive Lib
 from lib_gdrive import LibGdrive
@@ -39,6 +40,7 @@ class LogicTv(LogicModuleBase):
     def process_menu(self, sub, req):
         arg = P.ModelSetting.to_dict()
         arg['sub'] = self.name
+        arg['proxy_url'] = ToolUtil.make_apikey_url(f'/{package_name}/api/proxy')
         P.logger.debug('sub:%s', sub)
         if sub == 'itemlist':
             arg['categories'] = ','.join(ScmUtil.get_rule_names(self.name))

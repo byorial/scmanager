@@ -16,7 +16,6 @@ from framework.common.util import headers, get_json_with_auth_session
 from framework.common.plugin import LogicModuleBase, default_route_socketio
 from framework.job import Job
 from tool_expand import ToolExpandFileProcess
-from tool_base import ToolUtil
 try:
     import guessit
 except ImportError:
@@ -129,7 +128,8 @@ class LogicBase(LogicModuleBase):
 
     def process_menu(self, sub, req):
         arg = P.ModelSetting.to_dict()
-        arg['sub'] = self.name
+        name = self.name
+        arg['sub'] = name
         P.logger.debug('sub:%s', sub)
         if sub == 'setting':
             job_id = '%s_%s' % (self.P.package_name, self.name)
