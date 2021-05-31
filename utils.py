@@ -1158,15 +1158,16 @@ class ScmUtil(LogicModuleBase):
             logger.debug(f'{fileid},{remote_name},{kind},{name}')
 
             remote = ScmUtil.get_remote_by_name(remote_name)
-            if remote == None:
+            if not remote:
                 logger.error(f'failed to get remote({remote_name})')
-                # TODO
-                return (401)
+                return Response(f'failed to get remote{remote_name})', 401, content_type='text/html')
 
-            token = json.loads(remote['token'])['access_token']
+            token = LibGdrive.get_access_token_by_remote(remote)
+            if not token:
+                logger.error(f'failed to get access_token({remote_name})')
+                return Response(f'failed to get access_token{remote_name})', 401, content_type='text/html', direct_paththrough=True)
+
             headers = ScmUtil.get_headers(dict(request.headers), kind, token)
-            # TODO:에러처리 
-
             url = base_url.format(fileid=fileid)
             r = requests.get(url, headers=headers, stream=True)
             # reponse header reset
@@ -1178,7 +1179,6 @@ class ScmUtil(LogicModuleBase):
             rv = Response(r.iter_content(chunk_size=chunk), r.status_code, content_type=r.headers['Content-Type'], direct_passthrough=True)
             rv.headers.add('Content-Range', r.headers.get('Content-Range'))
             return rv
-
         except Exception as e:
             logger.error('Exception:%s', e)
             logger.error(traceback.format_exc())
