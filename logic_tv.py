@@ -96,6 +96,9 @@ class LogicTv(LogicModuleBase):
             elif sub == 'get_children':
                 db_id = int(req.form['id'])
                 ret = ScmUtil.get_children(self.name, db_id)
+            elif sub == 'get_subchildren':
+                fileid = req.form['fileid']
+                ret = ScmUtil.get_subchildren(fileid)
             elif sub == 'change_excluded':
                 db_id = int(req.form['id'])
                 action = req.form['action']

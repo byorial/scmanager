@@ -209,6 +209,29 @@ $("body").on('click', '#get_children_btn', function(e){
   get_children_info(id);
 });
 
+$("body").on('click', '#get_subchildren_btn', function(e){
+  e.preventDefault();
+  fileid = $(this).data('fileid');
+  document.querySelectorAll('[id=get_collapse_btn]').forEach(element=> {
+    document.getElementById(element.dataset.fileid).style.display = "none";
+    element.setAttribute('name', 'get_subchildren_btn');
+    element.setAttribute('id', 'get_subchildren_btn');
+  });
+  get_subchildren_info(fileid);
+  $(this).attr('name', 'get_collapse_btn');
+  $(this).attr('id', 'get_collapse_btn');
+});
+
+$("body").on('click', '#get_collapse_btn', function(e){
+  e.preventDefault();
+  fileid = $(this).data('fileid');
+  document.getElementById(fileid).style.display = "none";
+  $(this).attr('name', 'get_subchildren_btn');
+  $(this).attr('id', 'get_subchildren_btn');
+});
+
+
+
 $("body").on('click', '#info_refresh_btn', function(e){
   e.preventDefault();
   id = $(this).data('id');
@@ -392,16 +415,36 @@ function get_children_info(id) {
             str += m_col(2, get_byte_str(bytes));
 	  }
 	  if (data.list[k].in_plex == "False") {
-	    tmp = m_button_tt('shortcut_create_subitem_btn', 'Plex추가', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].id}], 'info', '해당에피소드를 Plex에 추가합니다', 'left', 'medium');
+	    tmp = m_button_tt('shortcut_create_subitem_btn', '추가', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].id}], 'info', '해당에피소드를 Plex에 추가합니다', 'left', 'medium');
+            if (data.list[k].mimeType.startsWith('video/')) {
+	      tmp += m_button('play_video_btn', '재생', [{'key':'fileid', 'value':data.list[k].id},{'key':'name', 'value':data.list[k].name}]);
+            } if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+	      tmp += m_button('get_subchildren_btn', '확장', [{'key':'fileid', 'value':data.list[k].id}]);
+	    }
+	    tmp = m_button_group(tmp)
 	  } else if (data.list[k].in_plex == "True") {
 	    btn_str = m_button_tt('refresh_subitem_btn', '갱신', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].shortcut_id}], 'info', '해당아이템을 Plex에서 갱신합니다.', 'left', 'medium');
 	    btn_str += m_button_tt('shortcut_remove_subitem_btn', '삭제', [{'key':'entity_id', 'value':id}, {'key':'file_id', 'value':data.list[k].shortcut_id}], 'danger', '해당에피소드를 Plex에서 삭제합니다.', 'right', 'medium');
+            if (data.list[k].mimeType.startsWith('video/')) {
+	      btn_str += m_button('play_video_btn', '재생', [{'key':'fileid', 'value':data.list[k].id},{'key':'name', 'value':data.list[k].name}]);
+            } else if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+	      tmp += m_button('get_subchildren_btn', '확장', [{'key':'fileid', 'value':data.list[k].id}]);
+	    }
 	    tmp = m_button_group(btn_str)
 	  } else {
-	    tmp = '<span align="center">-</span>';
+            if (data.list[k].mimeType.startsWith('video/')) {
+	      tmp = m_button('play_video_btn', '재생', [{'key':'fileid', 'value':data.list[k].id},{'key':'name', 'value':data.list[k].name}]);
+            } else if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+	      tmp = m_button('get_subchildren_btn', '확장', [{'key':'fileid', 'value':data.list[k].id}]);
+	    } else {
+	      tmp = '<span align="center">-</span>';
+	    }
 	  }
 	  str += tmp;
           str += m_row_end();
+          if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+	    str += '<span id="'+data.list[k].id+'" style="display:none"></span>';
+	  }
           if (k != data.list.length -1) {str += m_hr();}
         }
 	count = data.list.length;
@@ -416,6 +459,53 @@ function get_children_info(id) {
 	document.getElementById('children_info_list').innerHTML = str;
 	document.getElementById('children_info_modal_title').textContent = title_str;
         $("#children_info_modal").modal();
+      } else {
+        $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
+      }
+    }
+  });
+}
+
+function get_subchildren_info(fileid) {
+  $.ajax({
+    url: '/' + package_name + '/ajax/'+sub+'/get_subchildren',
+    type: "POST",
+    cache: false,
+    data: {'fileid':fileid},
+    dataType: "json",
+    success: function (data) {
+      if ( data.ret == 'success') {
+        var str = '';
+	for (k in data.list) {
+          str += m_row_start();
+	  if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+            str += m_col_tt(2, '   폴더', tooltip=data.list[k].mimeType, pos='down-left');
+	  } else if (data.list[k].mimeType.startsWith('video/')) {
+            str += m_col_tt(2, '   영상', tooltip=data.list[k].mimeType, pos='down-left');
+	  } else if (data.list[k].mimeType.startsWith('text/')) {
+            str += m_col_tt(2, '   자막', tooltip=data.list[k].mimeType, pos='down-left');
+	  } else {
+            str += m_col_tt(2, '   기타', tooltip=data.list[k].mimeType, pos='down-left');
+	  }
+          tmp = data.list[k].name;
+          str += m_col(6, tmp);
+	  if (data.list[k].mimeType == 'application/vnd.google-apps.folder') {
+            str += m_col(2, '폴더');
+	  } else {
+	    bytes = parseInt(data.list[k].size);
+            str += m_col(2, get_byte_str(bytes));
+	  }
+          if (data.list[k].mimeType.startsWith('video/')) {
+	    tmp = m_button('play_video_btn', '재생', [{'key':'fileid', 'value':data.list[k].id},{'key':'name', 'value':data.list[k].name}]);
+          } else {
+	    tmp = '<span align="center">-</span>';
+	  }
+	  str += m_col(2, tmp);
+          str += m_row_end();
+        }
+        k = 0;
+	document.getElementById(fileid).innerHTML = str;
+	document.getElementById(fileid).style.display = '';
       } else {
         $.notify('<strong>실패: ' +data.msg+ '</strong>', {type: 'warning'});
       }

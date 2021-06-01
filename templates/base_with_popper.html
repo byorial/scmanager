@@ -24,8 +24,6 @@
     <script src="{{ url_for('static', filename='js/bootstrap-notify.min.js') }}"></script>
     <script src="{{ url_for('static', filename='js/custom10.js') }}"></script>
     <script src="{{ url_for('static', filename='js/sjva_ui13.js') }}"></script>
-    <link rel="stylesheet" href="https://cdn.plyr.io/3.6.8/plyr.css" />
-    <script src="https://cdn.plyr.io/3.6.8/plyr.js"></script>
 
     <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/1.4.6/socket.io.js"></script>
     <!-- 토글 -->
@@ -180,6 +178,14 @@
     <div class="loading" id="loading">
       <img src="/static/img/loading.gif" />
     </div>
+
+<!-- video재생 데이터 전송용 form -->
+<form name="playform">
+  <input type="hidden" id="play_title" name="play_title">
+  <input type="hidden" id="play_source_src" name="play_source_src">
+  <input type="hidden" id="play_source_type" name="play_source_type">
+</form>
+
   </body>
 </html>
 
@@ -811,16 +817,23 @@ function m_col_tt(col, text, tooltip='', pos='down', size='large') {
 
 $("body").on('click', '#play_video_btn', function(e) {
   e.preventDefault();
-  fileid = $(this).data('fileid');
-  video_url = proxy_url + '&fileid='+fileid;
-  str = '<video controls autostart="true" playsinline id="myVideo">';
-  str += '<source type="video/mp4" src="'+video_url+'" width="720px"/>';
-  str += '</video>'
-  document.getElementById("playvideo_div").innerHTML = str;
-  $("#children_info_modal").modal('hide');
-  player = new Plyr(document.getElementById('myVideo'));
-  $("#playvideo_modal").modal();
-  player.play();
+  var fileid = $(this).data('fileid');
+  var fname = $(this).data('name');
+  var video_url = proxy_url + ((proxy_url.indexOf('?') == -1) ? '?' : '&') + 'f=' + fileid
+  
+  var form = document.playform;
+  var url = '/system/videojs';
+  var popupWidth = 980;
+  var leftPos = screen.width - popupWidth;
+  window.open('', fileid, "location=no,directories=no,resizable=no,status=no,toolbar=no,menubar=no,width=" + popupWidth + ", height=560, top=100, left=" + leftPos);
+  form.action = url;
+  form.method = "post";
+  form.target = fileid;
+
+  $('#play_title').val(fname);
+  $('#play_source_src').val(video_url);
+  $('#play_source_type').val('video/mp4');
+  form.submit();
 });
 
 </script>

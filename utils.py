@@ -319,6 +319,30 @@ class ScmUtil(LogicModuleBase):
             return { 'ret':'error', 'msg':'에러발생! 로그를 확인해주세요.' }
 
     @staticmethod
+    def get_subchildren(fileid):
+        try:
+            ret = {}
+            service = None
+            service = LibGdrive.sa_authorize(ModelSetting.get('gdrive_auth_path'), return_service=True)
+            if service == None: return {'ret':'error', 'msg':u'서비스계정 인증 실패.'}
+
+            children = LibGdrive.get_children(fileid, ['id', 'name', 'mimeType', 'size'], service=service)
+            if children == None:
+                return { 'ret':'error', 'msg':'"{}"의 정보조회 실패.'.format(fileid) }
+
+            children = sorted(children, key=lambda x:x['name'], reverse=True)
+            ret['ret'] = 'success'
+            ret['list'] = children
+            return ret
+
+        except Exception as e:
+            logger.debug('Exception:%s', e)
+            logger.debug(traceback.format_exc())
+            return { 'ret':'error', 'msg':'에러발생! 로그를 확인해주세요.' }
+
+
+
+    @staticmethod
     def get_children(module_name, db_id):
         try:
             ret = {}
@@ -1151,10 +1175,10 @@ class ScmUtil(LogicModuleBase):
         try:
             base_url = 'https://www.googleapis.com/drive/v3/files/{fileid}?alt=media'
 
-            fileid = request.args.get('fileid', None)
-            remote_name = request.args.get('remote', ModelSetting.get('default_remote'))
-            kind = request.args.get('kind', 'video')
-            name = request.args.get('name', None)
+            fileid = request.args.get('f', None)
+            remote_name = request.args.get('r', ModelSetting.get('default_remote'))
+            kind = request.args.get('k', 'video')
+            name = request.args.get('n', None)
             logger.debug(f'{fileid},{remote_name},{kind},{name}')
 
             remote = ScmUtil.get_remote_by_name(remote_name)

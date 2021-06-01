@@ -509,7 +509,7 @@ function get_children_info(id) {
             str += m_col(2, get_byte_str(bytes));
 	  }
           if (data.list[k].mimeType.startsWith('video/')) {
-	    str += m_col(2, m_button('play_video_btn', 'Play', [{'key':'fileid', 'value':data.list[k].id}]));
+	    str += m_col(2, m_button('play_video_btn', 'Play', [{'key':'fileid', 'value':data.list[k].id},{'key':'name', 'value':data.list[k].name}]));
           } else {
             str += '-'
           }
