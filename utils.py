@@ -1137,12 +1137,11 @@ class ScmUtil(LogicModuleBase):
 
     @staticmethod
     def get_remote_by_name(remote_name):
+        from tool_base import ToolRclone
         try:
-            from rclone.logic import Logic as LogicRclone
-            remotes = LogicRclone.load_remotes()
-            for remote in remotes:
-                if remote['name'] == remote_name:
-                    return remote
+            remotes = ToolRclone.config_list()
+            if remote_name in remotes:
+                return remotes[remote_name]
             return None
         except Exception as e:
             logger.error('Exception:%s', e)
@@ -1159,10 +1158,10 @@ class ScmUtil(LogicModuleBase):
                 if 'Range' in headers: del(headers['Range'])
             headers['Authorization'] = f"Bearer {token}"
             headers['Connection'] = 'keep-alive'
-            del(headers['Host'])
-            del(headers['X-Forwarded-Scheme'])
-            del(headers['X-Forwarded-Proto'])
-            del(headers['X-Forwarded-For'])
+            if 'Host' in headers: del(headers['Host'])
+            if 'X-Forwarded-Scheme' in headers: del(headers['X-Forwarded-Scheme'])
+            if 'X-Forwarded-Proto' in headers: del(headers['X-Forwarded-Proto'])
+            if 'X-Forwarded-For' in headers: del(headers['X-Forwarded-For'])
             if 'Cookie' in headers: del(headers['Cookie'])
             return headers
         except Exception as e:
