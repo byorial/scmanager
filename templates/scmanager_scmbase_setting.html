@@ -38,6 +38,7 @@
     {{ macros.setting_checkbox('scmbase_auto_start', '시작시 자동실행', value=arg['scmbase_auto_start'], desc='On : 시작시 자동으로 스케쥴러에 등록됩니다.') }}
     {{ macros.setting_input_int('gdrive_thread_num', 'GDrive처리Thread수', value=arg['gdrive_thread_num'], desc='Gdrive 파일탐색/처리용 쓰레드 수') }}
     {{ macros.setting_input_text('gdrive_local_path_rule', '로컬 경로변환규칙', value=arg['gdrive_plex_path_rule'], desc=['SJVA에서 구글드라이브 경로와 로컬마운트 경로가 다를경우 사용', '형식: GDrive상경로|로컬마운트 경로', '예: /Plex|/mnt/plex (구글드라이브 Plex가 로컬에서 /mnt/plex로 마운트됨 경우)']) }}
+    {{ macros.setting_input_int('item_per_page', '페이지당 아이템', value=arg['item_per_page'], desc='목록에서 페이지당 표시할 아이템 수') }}
     {{ macros.setting_checkbox('use_trash', '삭제시휴지통폴더사용', value=arg['use_trash'], desc=['바로가기 삭제시 휴지통 폴더로 이동 여부(구드휴지통 아님/별도의폴더)']) }}
     {{ macros.setting_input_text('trash_folder_id', '휴지통폴더ID', value=arg['trash_folder_id'], desc=['휴지통으로 사용할 폴더ID']) }}
     {% if arg['use_av'] == True %}

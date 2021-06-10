@@ -58,6 +58,7 @@ class LogicBase(LogicModuleBase):
         'avlist_show_poster': u'True',
         'use_trash': u'False',
         'trash_folder_id': u'',
+        'item_per_page': u'30',
 
         # plex
         'plex_remove_library': u'True',

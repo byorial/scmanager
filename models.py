@@ -137,7 +137,7 @@ class ModelRuleItem(db.Model):
         try:
             ret = {}
             page = 1
-            page_size = 30
+            page_size = ModelSetting.get_int('item_per_page')
             job_id = ''
             search = ''
             category = ''
@@ -176,9 +176,9 @@ class ModelRuleItem(db.Model):
                 tmp = search.split(',')
                 for tt in tmp:
                     if tt != '':
-                        query = query.filter(cls.title.like('%'+tt.strip()+'%'))
+                        query = query.filter(cls.name.like('%'+tt.strip()+'%'))
             else:
-                query = query.filter(or_(cls.title.like('%'+search+'%'), cls.name.like('%'+search+'%')))
+                query = query.filter(or_(cls.name.like('%'+search+'%'), cls.name.like('%'+search+'%')))
 
         if agent_type != 'all':
             query = query.filter(cls.agent_type == agent_type)
@@ -349,7 +349,7 @@ class ModelTvMvItem(db.Model):
         try:
             ret = {}
             page = 1
-            page_size = 30
+            page_size = ModelSetting.get_int('item_per_page')
             job_id = ''
             search = ''
             category = ''
@@ -582,7 +582,7 @@ class ModelAvItem(db.Model):
         try:
             ret = {}
             page = 1
-            page_size = 30
+            page_size = ModelSetting.get_int('item_per_page')
             job_id = ''
             search = ''
             category = ''
@@ -799,7 +799,7 @@ class ModelSubItem(db.Model):
         try:
             ret = {}
             page = 1
-            page_size = 30
+            page_size = ModelSetting.get_int('item_per_page')
             job_id = ''
             search = ''
             category = ''
