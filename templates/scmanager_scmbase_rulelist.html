@@ -8,15 +8,13 @@
     <div class="container-fluid">
       <div class="row show-grid" align="center">
         <span class="col-md-12" align="left">
-          <span class="col-md-4" style="align-items:left; text-align:left;">
-            <select name="agent_type" id="agent_type">
+          <span class="col-md-3" style="align-items:left; text-align:left;">
+            <select name="agent_type" id="agent_type" class="form-control form-control-sm">
               <option value="all">전체</option>
             </select>
          </span>
-         <span class="col-md-6">
+         <span class="col-md-9">
 	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목입력" aria-label="Search">
-	 </span>
-         <span class="col-md-2">
           {{ macros.m_button_group([['search', '검색'], ['rule_register_modal_btn', '신규등록']]) }}
          </span>
         </span>
@@ -558,5 +556,9 @@ function m_button_tt(id, text, data, outline_color, tooltip='', pos='down', size
   return str;
 }
 
+
+$("body").on('change', '#agent_type', function(e){
+  request_search(current_page, true);
+});
 </script>    
 {% endblock %}

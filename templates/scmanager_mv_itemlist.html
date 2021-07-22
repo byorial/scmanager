@@ -8,23 +8,21 @@
       <div class="row show-grid" align="center">
         <span class="col-md-12" align="left">
           <span class="col-md-6" style="align-items:left; text-align:left;">
-            <select name='category' onchange='change_genre_options(value)'>
+            <select name='category' onchange='change_genre_options(value)' class='form-control form-control-sm'>
               <option value="all">전체경로</option>
             </select>
-            <select name='genre'>
+            <select id='genre' name='genre' class='form-control form-control-sm'>
               <option value="all">전체장르</option>
             </select>
-            <select name='status_option'>
+            <select id='status_option' name='status_option' class='form-control form-control-sm'>
               <option value="all">전체상태</option>
               <option value="true">숏컷생성</option>
               <option value="false">숏컨미생성</option>
               <option value="excluded">제외목록</option>
             </select>
          </span>
-         <span class="col-md-3">
+         <span class="col-md-6">
 	  <input id="search_word" name="search_word" class="form-control form-control-sm w-50" type="text" placeholder="제목 or 폴더명 입력" aria-label="Search">
-	 </span>
-         <span class="col-md-3">
           {{ macros.m_button_group([['search', '검색'], ['reset_btn', '리셋'], ['request_modal_btn', '요청']]) }}
          </span>
         </span>
@@ -522,6 +520,7 @@ function change_genre_options(rulename) {
   } else {
     set_genres(rulename);
   }
+  global_sub_request_search(current_page, true);
 }
 
 function set_genres(rulename) {
@@ -614,6 +613,10 @@ $("body").on('click', '#request_msg_btn', function(e) {
       }
     }
   });
+});
+
+$("body").on('change', '#genre,#status_option', function(e){
+  global_sub_request_search(current_page, true);
 });
 
 </script>    

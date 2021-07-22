@@ -8,13 +8,13 @@
       <div class="row show-grid" align="center">
         <span class="col-md-12">
           <span class="col-md-6" style="align-items:left; text-align:left;">
-            <select name='category' onchange='change_genre_options(value)'>
+	    <select name='category' onchange='change_genre_options(value)' class="form-control form-control-sm">
               <option value="all">전체경로</option>
             </select>
-            <select name='genre'>
+            <select id='genre' name='genre' class="form-control form-control-sm">
               <option value="all">전체장르</option>
             </select>
-            <select name='status_option'>
+            <select id='status_option' name='status_option' class="form-control form-control-sm">
               <option value="all">전체상태</option>
               <option value="true">숏컷생성</option>
               <option value="false">숏컨미생성</option>
@@ -729,6 +729,7 @@ function change_genre_options(rulename) {
   } else {
     set_genres(rulename);
   }
+  global_sub_request_search(current_page, true);
 }
 
 function set_genres(rulename) {
@@ -771,6 +772,10 @@ $("body").on('click', '#request_msg_btn', function(e) {
       }
     }
   });
+});
+
+$("body").on('change', '#genre,#status_option', function(e){
+  global_sub_request_search(current_page, true);
 });
 
 </script>    
