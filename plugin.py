@@ -90,7 +90,7 @@ class P(object):
 
 
     plugin_info = {
-        'version' : '0.3.0.2',
+        'version' : '0.3.0.3',
         'name' : package_name,
         'category_name' : 'service',
         'icon' : '',
@@ -98,6 +98,16 @@ class P(object):
         'description' : u'Gdrive shorcut manager for SJVA Plugin',
         'home' : 'https://github.com/byorial/%s' % package_name,
         'more' : '',
+        "dependency": [
+            {
+                "name": "lib_gdrive",
+                "home": "https://github.com/byorial/lib_gdrive"
+            },
+            {
+                "name": "lib_metadata",
+                "home": "https://github.com/soju6jan/lib_metadata"
+            }
+        ]
     }
     ModelSetting = get_model_setting(package_name, logger)
     logic = None

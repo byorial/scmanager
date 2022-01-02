@@ -1,10 +1,24 @@
 {
-    "version": "0.3.0.2",
+    "version": "0.3.0.3",
     "name": "scmanager",
     "category_name": "service",
     "icon": "",
     "developer": "orial",
     "description": "Gdrive shorcut manager for SJVA Plugin",
     "home": "https://github.com/byorial/scmanager",
-    "more": ""
+    "more": "",
+    "dependency": [
+        {
+            "name": "lib_gdrive",
+            "home": "https://github.com/byorial/lib_gdrive"
+        },
+        {
+            "name": "lib_metadata",
+            "home": "https://github.com/soju6jan/lib_metadata"
+        },
+        {
+            "name": "metadata",
+            "home": "https://github.com/soju6jan/metadata"
+        }
+    ]
 }
