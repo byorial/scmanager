@@ -40,6 +40,7 @@ class LogicAv(LogicModuleBase):
         arg = P.ModelSetting.to_dict()
         arg['sub'] = self.name
         arg['proxy_url'] = ToolUtil.make_apikey_url(f'/{package_name}/api/proxy')
+        if sub == 'None': sub = 'itemlist'
         if sub == 'itemlist':
             arg['categories'] = ','.join(ScmUtil.get_rule_names(self.name))
             arg['agent_types'] = ','.join(ScmUtil.get_agent_types(self.name))

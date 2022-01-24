@@ -15,10 +15,6 @@
         {
             "name": "lib_metadata",
             "home": "https://github.com/soju6jan/lib_metadata"
-        },
-        {
-            "name": "metadata",
-            "home": "https://github.com/soju6jan/metadata"
         }
     ]
 }
