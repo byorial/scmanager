@@ -132,6 +132,7 @@ class LogicBase(LogicModuleBase):
         name = self.name
         arg['sub'] = name
         P.logger.debug('sub:%s', sub)
+        if sub == 'null': sub = 'setting'
         if sub == 'setting':
             job_id = '%s_%s' % (self.P.package_name, self.name)
             job_id2 = '%s_%s' % (self.P.package_name, 'tv')

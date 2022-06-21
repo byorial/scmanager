@@ -42,6 +42,7 @@ class LogicMv(LogicModuleBase):
         arg['sub'] = self.name
         P.logger.debug('sub:%s', sub)
         arg['proxy_url'] = ToolUtil.make_apikey_url(f'/{package_name}/api/proxy')
+        if sub == 'null': sub = 'itemlist'
         if sub == 'itemlist':
             arg['categories'] = ','.join(ScmUtil.get_rule_names(self.name))
             arg['agent_types'] = ','.join(ScmUtil.get_agent_types(self.name))
