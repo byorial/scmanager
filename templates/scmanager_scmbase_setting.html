@@ -23,14 +23,16 @@
   <form id='setting' name='setting'>
   <div class="tab-content" id="nav-tabContent">
    {{ macros.m_tab_content_start('api', true) }}
+    {{ macros.info_text('gdrive_use_sa', '서비스계정사용여부', desc=['True: 서비스계정 사용, False: 서비스계정 미사용(기본값)']) }}
     {{ macros.info_text('sa_auth_status', '서비스계정 인증상태', desc=['구글드라이브 조회, 정보획득, 바로가기 생성에 사용']) }}
     {{ macros.setting_input_text_and_buttons('gdrive_auth_path', '서비스계정인증파일위치경로', [['sa_auth_btn', '서비스계정인증']],value=arg['gdrive_auth_path'], desc=['GDrive API 사용설정된 서비스계정의 인증파일(json)이 위치한 경로', 'RcloneExpand 모듈로 생성한 인증파일 위치(json파일들이위치한 폴더)','서비스계정 인증상태가 미인증인 경우 경로입력 후 "서비스계정인증" 버튼을 눌러주세요']) }}
     {{ macros.m_hr() }}
     {{ macros.info_text('user_auth_status', '사용자API인증상태', desc=['폴더생성, 바로가기 삭제에 사용']) }}
-    {{ macros.info_text_go('', 'QuickStart Python', value='https://developers.google.com/drive/api/v3/quickstart/python', desc=['GDriveAPI사용 설정, 이미 사용설정된 API가 있는 경우 불필요함']) }}
+    {{ macros.setting_input_text_and_buttons('rclone_remote_name', '리모트명', [['auth_with_rclone_btn', '사용자인증']], value=arg['rclone_remote_name'], desc=['GDrive API 사용자 인증용 리모트명(rclone.conf기준)']) }}
+    <!--// {{ macros.info_text_go('', 'QuickStart Python', value='https://developers.google.com/drive/api/v3/quickstart/python', desc=['GDriveAPI사용 설정, 이미 사용설정된 API가 있는 경우 불필요함']) }}
     {{ macros.setting_input_text('gdrive_creds_path', '사용자API credential.json 경로', value=arg['gdrive_creds_path'], desc=['GDrive API credentials.json이 위치한 경로','구글콘솔에서 OAuth json파일을 다운받아 저장한 경로']) }}
     {{ macros.setting_input_text_and_buttons('gdrive_token_path', '사용자API token경로', [['auth_with_token_btn', '토큰인증']], value=arg['gdrive_token_path'], desc=['GDrive API 사용자 TOKEN경로: token.pickle 파일', '이미 생성된 토큰파일이 있는 경우 경로 지정후 인증 "토큰인증" 버튼을 눌러주세요.']) }}
-    {{ macros.setting_input_text_and_buttons('gdrive_auth_code', 'API 인증 코드', [['auth_step1_btn', '인증'], ['auth_step2_btn', '토큰생성']], value=arg['gdrive_auth_code'], desc=['바로가기 삭제시 필요, 사용자API인증상태가 False인 경우 실행필요','순서: 1. credentials.json파일 확인 후 인증클릭  2.코드입력  3.토큰생성 클릭']) }}
+    {{ macros.setting_input_text_and_buttons('gdrive_auth_code', 'API 인증 코드', [['auth_step1_btn', '인증'], ['auth_step2_btn', '토큰생성']], value=arg['gdrive_auth_code'], desc=['바로가기 삭제시 필요, 사용자API인증상태가 False인 경우 실행필요','순서: 1. credentials.json파일 확인 후 인증클릭  2.코드입력  3.토큰생성 클릭']) }} //-->
    {{ macros.m_tab_content_end() }}
    {{ macros.m_tab_content_start('normal', false) }}
     {{ macros.setting_global_scheduler_sub_button(arg['scheduler'], arg['is_running']) }}
@@ -192,10 +194,10 @@ $("body").on('click', '#sa_auth_btn', function(e) {
   });
 });
 
-$("body").on('click', '#auth_with_token_btn', function(e) {
+$("body").on('click', '#auth_with_rclone_btn', function(e) {
   e.preventDefault();
   $.ajax({
-    url: '/' + package_name + '/ajax/' + sub + '/auth_by_token',
+    url: '/' + package_name + '/ajax/' + sub + '/auth_by_rclone',
     type: "POST", 
     cache: false,
     data:{},

@@ -43,12 +43,14 @@ class LogicBase(LogicModuleBase):
         'use_setting': 'True',
 
         # API
+        'gdrive_use_sa'     : u'False',
         'gdrive_token_path' : os.path.join(path_data, package_name, 'token.pickle'),
         'gdrive_creds_path' : os.path.join(path_data, package_name, 'credentials.json'),
         'gdrive_sa_auth'    : u'False',
         'gdrive_user_auth'  : u'False',
         'gdrive_auth_code'  : u'',
         'gdrive_auth_path'  : os.path.join(path_data, 'rclone_expand', 'accounts'),
+        'rclone_remote_name': u'gdrive',
 
         # 일반
         'scmbase_auto_start' : u'False',
@@ -203,6 +205,8 @@ class LogicBase(LogicModuleBase):
                 else:
                     logger.error('gdrive user auth failed')
                     ret = {'ret':'success', 'msg':u'구글드라이브 API인증 실패'}
+            elif sub == 'auth_by_rclone':
+                ret = LogicBase.auth_by_rclone()
             elif sub == 'sa_auth':
                 json_path = req.form['path']
                 LogicBase.Services = LibGdrive.sa_authorize_for_multiple_connection(ModelSetting.get('gdrive_auth_path'), ModelSetting.get_int('gdrive_thread_num'))
@@ -236,6 +240,30 @@ class LogicBase(LogicModuleBase):
             P.logger.error('Exception:%s', e)
             P.logger.error(traceback.format_exc())
             return jsonify({'ret':'exception', 'msg':str(e)})
+
+    @staticmethod
+    def auth_by_rclone():
+        try:
+            from tool_base import ToolRclone
+            remotes = ToolRclone.config_list()
+            remote_name = ModelSetting.get('rclone_remote_name')
+
+            logger.debug(f'사용자 인증 시도(rclone): remote_name({remote_name})')
+            if remote_name in remotes: remote = remotes[remote_name]
+            if remote == None:
+                logger.error('gdrive user auth failed. invalid remote name')
+                ret = {'ret':'failed', 'msg':u'구글드라이브 API인증 실패(리모트명 확인필요)'}
+            else:
+                service = LibGdrive.auth_by_rclone_remote(remote, set_service=True)
+                if not service:
+                    logger.error('gdrive user auth failed')
+                    ret = {'ret':'failed', 'msg':u'구글드라이브 API인증 실패(lib_gdrive.log확인)'}
+                else:
+                    logger.debug('gdrive user auth succeed')
+                    ret = {'ret':'success', 'msg':u'구글드라이브 API인증 완료'}
+            return ret
+        except Exception as e:
+            return {'ret':'error', 'msg':'스캔명령 전송 실패: 로그를 확인하세요.'}
 
     @staticmethod
     def send_plex_scan(agent_type, db_id):
@@ -379,9 +407,15 @@ class LogicBase(LogicModuleBase):
             ret = LibGdrive.sa_authorize(json_path)
             if ret == True: ModelSetting.set('gdrive_sa_auth', 'True')
             else: ModelSetting.set('gdrive_sa_auth', 'False')
+            # user auth by rclone
+            ret = LogicBase.auth_by_rclone()
+            if ret['ret'] != 'success': ModelSetting.set('gdrive_user_auth', u'False')
+            else: ModelSetting.set('gdrive_user_auth', u'True')
+            """
             ret = LibGdrive.user_authorize(ModelSetting.get('gdrive_token_path'))
             if ret == True: ModelSetting.set('gdrive_user_auth', 'True')
             else: ModelSetting.set('gdrive_user_auth', 'False')
+            """
             LogicBase.Services = LibGdrive.sa_authorize_for_multiple_connection(ModelSetting.get('gdrive_auth_path'), ModelSetting.get_int('gdrive_thread_num'))
 
             if LogicBase.RuleJobQueue == None: LogicBase.RuleJobQueue = py_queue.Queue()
