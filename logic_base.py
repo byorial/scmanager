@@ -816,6 +816,7 @@ class LogicBase(LogicModuleBase):
                             break
                 if metadata_id == '':
                     logger.error('[CALLBACK] ADD-failed to get metadata_id(path:%s)', entity.plex_path)
+                    LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'ADD', 'now':datetime.now()})
                     return
 
                 # SHOW의 경우 프로그램 자체의 메타데이터 얻어옴(에피소드> 시즌> 프로그램)
