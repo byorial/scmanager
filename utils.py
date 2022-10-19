@@ -760,116 +760,121 @@ class ScmUtil(LogicModuleBase):
 
     @staticmethod
     def info_metadata(agent_type, code, title):
-        from metadata.logic_ktv import LogicKtv
-        from metadata.logic_movie import LogicMovie
-        from metadata.logic_ftv import LogicFtv
-        from metadata.logic_ott_show import LogicOttShow
-        from metadata.logic_jav_censored import LogicJavCensored
-        from metadata.logic_jav_censored_ama import LogicJavCensoredAma
+        try:
+            from metadata.logic_ktv import LogicKtv
+            from metadata.logic_movie import LogicMovie
+            from metadata.logic_ftv import LogicFtv
+            from metadata.logic_ott_show import LogicOttShow
+            from metadata.logic_jav_censored import LogicJavCensored
+            from metadata.logic_jav_censored_ama import LogicJavCensoredAma
 
-        agent_map = {'ktv':LogicKtv(LogicKtv), 'ftv':LogicFtv(LogicFtv), 
-                'movie':LogicMovie(LogicMovie),
-                'avdvd':LogicJavCensored(LogicJavCensored), 'avama':LogicJavCensoredAma(LogicJavCensoredAma)}
+            agent_map = {'ktv':LogicKtv(LogicKtv), 'ftv':LogicFtv(LogicFtv), 
+                    'movie':LogicMovie(LogicMovie),
+                    'avdvd':LogicJavCensored(LogicJavCensored), 'avama':LogicJavCensoredAma(LogicJavCensoredAma)}
 
-        site_map = {'ktv':['daum','tving','wavve'],
-                'ftv':['daum', 'tvdb', 'tmdb', 'watcha', 'tmdb'],
-                'movie':['naver', 'daum', 'tmdb', 'watcha', 'wavve', 'tving'],
-                'avdvd':['dmm', 'javbus'],
-                'avama':['mgstage', 'jav321', 'r18']}
+            site_map = {'ktv':['daum','tving','wavve'],
+                    'ftv':['daum', 'tvdb', 'tmdb', 'watcha', 'tmdb'],
+                    'movie':['naver', 'daum', 'tmdb', 'watcha', 'wavve', 'tving'],
+                    'avdvd':['dmm', 'javbus'],
+                    'avama':['mgstage', 'jav321', 'r18']}
 
-        #TV
-        logger.debug('agent_type:%s, code:%s, title:%s', agent_type, code, title)
-        title, year = ScmUtil.get_title_year_from_dname(title)
-        metadata = {}
-        if agent_type == 'ktv':
-            metadata = agent_map[agent_type].info(code, title)
-            if metadata == None:
-                import framework.wavve.api as Wavve
-                import framework.tving.api as Tving
+            #TV
+            logger.debug('agent_type:%s, code:%s, title:%s', agent_type, code, title)
+            title, year = ScmUtil.get_title_year_from_dname(title)
+            metadata = {}
+            if agent_type == 'ktv':
+                metadata = agent_map[agent_type].info(code, title)
+                if metadata == None:
+                    import framework.wavve.api as Wavve
+                    import framework.tving.api as Tving
 
-                if code[1] == 'W':
-                    info = {}
-                    r = Wavve.vod_programs_programid(code[2:])
-                    if r == {}: return None
-                    info['code'] = code
-                    info['status'] = 1 if r['onair'] == "y" else 2
-                    info['title'] = r['programtitle']
-                    info['site'] = 'wavve'
-                    info['poster_url'] = r['posterimage'] if 'posterimage' in r else ''
-                    info['studio'] = r['cpname']
-                    if 'firstreleasedate' in r:
-                        if r['firstreleasedate'] == '': info['year'] = 1900
-                        else: info['year'] = int(r['firstreleasedate'][:4])
-                    else: info['year'] = 1900
-                    info['genre'] = u'기타'
-                    info['country'] = u'한국'
-                    return info
+                    if code[1] == 'W':
+                        info = {}
+                        r = Wavve.vod_programs_programid(code[2:])
+                        if r == {}: return None
+                        info['code'] = code
+                        info['status'] = 1 if r['onair'] == "y" else 2
+                        info['title'] = r['programtitle']
+                        info['site'] = 'wavve'
+                        info['poster_url'] = r['posterimage'] if 'posterimage' in r else ''
+                        info['studio'] = r['cpname']
+                        if 'firstreleasedate' in r:
+                            if r['firstreleasedate'] == '': info['year'] = 1900
+                            else: info['year'] = int(r['firstreleasedate'][:4])
+                        else: info['year'] = 1900
+                        info['genre'] = u'기타'
+                        info['country'] = u'한국'
+                        return info
 
-                # OTT SHOW
-                metadata = LogicOttShow(LogicOttShow).info(code)
-                #logger.debug(json.dumps(metadata, indent=2))
-                # TODO:
-                """
-                prefix = ScmUtil.get_additional_prefix_by_code(agent_type, code)
-                if prefix == u'': return None
-                tmp = prefix + ' ' + title
-                logger.debug('meta info failed add prefix(%s)', tmp)
-                metadata = agent_map[agent_type].info(code, tmp)
-                """
-        else:
-            metadata = agent_map[agent_type].info(code)
-
-        if metadata == None:
-            logger.error('failed to info metadata(%s:%s)', code, title)
-            return None
-        #debug
-        #if agent_type == 'ftv':
-            #logger.debug(json.dumps(metadata, indent=2))
-
-        info = {}
-        thumb = None
-        if agent_type.startswith('av'):
-            return ScmUtil.av_meta_info_map(metadata)
-        elif agent_type == 'ktv':
-            if 'thumb' in metadata:
-                thumbs = sorted(metadata['thumb'], key=lambda x:x['score'], reverse=True)
-                for th in thumbs:
-                    if th['aspect'] == 'poster':
-                        thumb = th
-                        break
-                if thumb == None:
-                    thumb = thumbs[0]
-        elif agent_type == 'movie' or agent_type == 'ftv':
-            if 'art' not in metadata: thumb = {'thumb':'', 'value':''}
+                    # OTT SHOW
+                    metadata = LogicOttShow(LogicOttShow).info(code)
+                    #logger.debug(json.dumps(metadata, indent=2))
+                    # TODO:
+                    """
+                    prefix = ScmUtil.get_additional_prefix_by_code(agent_type, code)
+                    if prefix == u'': return None
+                    tmp = prefix + ' ' + title
+                    logger.debug('meta info failed add prefix(%s)', tmp)
+                    metadata = agent_map[agent_type].info(code, tmp)
+                    """
             else:
-                for art in metadata['art']:
-                    if art['aspect'] == 'poster':
-                        thumb = art
-                        break
-                if thumb == None:
-                    if len(metadata['art']) > 0: thumb = metadata['art'][0]
-                    else: thumb = {'thumb':'', 'value':''}
+                metadata = agent_map[agent_type].info(code)
+
+            if metadata == None:
+                logger.error('failed to info metadata(%s:%s)', code, title)
+                return None
+            #debug
+            #if agent_type == 'ftv':
+                #logger.debug(json.dumps(metadata, indent=2))
+
+            info = {}
+            thumb = None
+            if agent_type.startswith('av'):
+                return ScmUtil.av_meta_info_map(metadata)
+            elif agent_type == 'ktv':
+                if 'thumb' in metadata:
+                    thumbs = sorted(metadata['thumb'], key=lambda x:x['score'], reverse=True)
+                    for th in thumbs:
+                        if th['aspect'] == 'poster':
+                            thumb = th
+                            break
+                    if thumb == None:
+                        thumb = thumbs[0]
+            elif agent_type == 'movie' or agent_type == 'ftv':
+                if 'art' not in metadata: thumb = {'thumb':'', 'value':''}
+                else:
+                    for art in metadata['art']:
+                        if art['aspect'] == 'poster':
+                            thumb = art
+                            break
+                    if thumb == None:
+                        if len(metadata['art']) > 0: thumb = metadata['art'][0]
+                        else: thumb = {'thumb':'', 'value':''}
 
 
-        info['code'] = metadata['code']
-        if agent_type == 'ftv': info['status'] = 1 if metadata['status'] == 'Continuing' else 2
-        else: info['status'] = metadata['status'] if 'status' in metadata else 2
-        info['title'] = metadata['title']
-        info['site'] = metadata['site']
-        info['poster_url'] = thumb['value'] if thumb['thumb'] == "" else thumb['thumb']
-        info['studio'] = metadata['studio']
-        info['year'] = metadata['year'] if 'year' in metadata else 1900
-        if 'genre' in metadata and len(metadata['genre']) > 0:
-            #logger.debug(metadata['genre'])
-            info['genre'] = re.sub('[/]','&', metadata['genre'][0])
-        else: info['genre'] = u''
-        if 'country' in metadata:
-            #logger.debug(json.dumps(metadata['country'], indent=2))
-            if type(metadata['country']) == type([]):
-                if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
-                else: info['country'] = u''
-            else: info['country'] = u'한국' if agent_type == 'ktv' else u''
-        return info
+            info['code'] = metadata['code']
+            if agent_type == 'ftv': info['status'] = 1 if metadata['status'] == 'Continuing' else 2
+            else: info['status'] = metadata['status'] if 'status' in metadata else 2
+            info['title'] = metadata['title']
+            info['site'] = metadata['site']
+            info['poster_url'] = thumb['value'] if thumb['thumb'] == "" else thumb['thumb']
+            info['studio'] = metadata['studio']
+            info['year'] = metadata['year'] if 'year' in metadata else 1900
+            if 'genre' in metadata and len(metadata['genre']) > 0:
+                #logger.debug(metadata['genre'])
+                info['genre'] = re.sub('[/]','&', metadata['genre'][0])
+            else: info['genre'] = u''
+            if 'country' in metadata:
+                #logger.debug(json.dumps(metadata['country'], indent=2))
+                if type(metadata['country']) == type([]):
+                    if len(metadata['country']) > 0: info['country'] = metadata['country'][0]
+                    else: info['country'] = u''
+                else: info['country'] = u'한국' if agent_type == 'ktv' else u''
+            return info
+        except Exception as e:
+            logger.error('Exception:%s', e)
+            logger.error(traceback.format_exc())
+            return None
     
     @staticmethod
     def get_all_jsonfiles(target_path):

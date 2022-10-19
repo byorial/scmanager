@@ -754,6 +754,7 @@ class LogicBase(LogicModuleBase):
                 if action.startswith('REMOVE'): LogicBase.refresh_plex_vfs(agent_type, item_id, remove=True)
                 if action.startswith('REFRESH') or action.startswith('ADD'): action = 'ADD'
                 if action == 'REMOVESUBITEM': action = 'REMOVE'
+
                 plex.Logic.send_scan_command2(package_name, section_id, scan_path, callback_id, action, package_name)
                 LogicBase.PlexScannerQueue.task_done()
                 logger.debug('plex_scanner_thread...job-end()')
@@ -816,7 +817,7 @@ class LogicBase(LogicModuleBase):
                             break
                 if metadata_id == '':
                     logger.error('[CALLBACK] ADD-failed to get metadata_id(path:%s)', entity.plex_path)
-                    #LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'ADD', 'now':datetime.now()})
+                    LogicBase.PlexScannerQueue.put({'id':entity.id, 'agent_type':entity.agent_type, 'path':entity.plex_path, 'action':'ADD', 'now':datetime.now()})
                     return
 
                 # SHOW의 경우 프로그램 자체의 메타데이터 얻어옴(에피소드> 시즌> 프로그램)
