@@ -306,7 +306,7 @@ class LogicBase(LogicModuleBase):
                 rc_path = ScmUtil.get_rc_path(plex_path)
                 logger.debug('[refresh_plex_vfs] rc vfs/refresh: %s', rc_path)
                 #command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path]
-                command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'dir='+rc_path, '_async=true']
+                command = [ModelSetting.get('rclone_bin_path'), 'rc', 'vfs/refresh', '--rc-addr', ModelSetting.get('rclone_rc_addr'), 'recursive=true', 'dir='+rc_path, '_async=true']
                 ret = SystemLogicCommand.execute_command_return(command, format='json')
                 logger.debug(ret)
                 if 'jobid' not in ret:
